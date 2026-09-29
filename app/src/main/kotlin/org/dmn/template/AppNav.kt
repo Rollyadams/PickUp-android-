@@ -4,11 +4,17 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+
+private val idArgs = listOf(navArgument("id") { type = NavType.StringType })
+
+private fun NavBackStackEntry.requestOrNull(): RideRequest? =
+    arguments?.getString("id")?.let { DriverRepository.request(it) }
 
 @Composable
 fun PickUpNav() {
@@ -43,16 +49,49 @@ fun PickUpNav() {
                     onOpenRequest = { id -> navController.navigate("request/$id") }
                 )
             }
-            composable(
-                route = "request/{id}",
-                arguments = listOf(navArgument("id") { type = NavType.StringType })
-            ) { entry ->
-                val id = entry.arguments?.getString("id")
-                val request = id?.let { DriverRepository.request(it) }
-                if (request != null) {
+            composable("request/{id}", arguments = idArgs) { entry ->
+                entry.requestOrNull()?.let { request ->
                     RequestDetailScreen(
                         request = request,
-                        onBack = { navController.popBackStack() }
+                        onBack = { navController.popBackStack() },
+                        onAccepted = {
+                            navController.navigate("pickup/${request.id}") {
+                                popUpTo("home")
+                            }
+                        }
+                    )
+                }
+            }
+            composable("pickup/{id}", arguments = idArgs) { entry ->
+                entry.requestOrNull()?.let { request ->
+                    PickupNavigationScreen(
+                        request = request,
+                        onStartTrip = {
+                            navController.navigate("trip/${request.id}") {
+                                popUpTo("home")
+                            }
+                        },
+                        onCancel = { navController.popBackStack("home", inclusive = false) }
+                    )
+                }
+            }
+            composable("trip/{id}", arguments = idArgs) { entry ->
+                entry.requestOrNull()?.let { request ->
+                    TripInProgressScreen(
+                        request = request,
+                        onEndTrip = {
+                            navController.navigate("complete/${request.id}") {
+                                popUpTo("home")
+                            }
+                        }
+                    )
+                }
+            }
+            composable("complete/{id}", arguments = idArgs) { entry ->
+                entry.requestOrNull()?.let { request ->
+                    TripCompleteScreen(
+                        request = request,
+                        onDone = { navController.popBackStack("home", inclusive = false) }
                     )
                 }
             }
