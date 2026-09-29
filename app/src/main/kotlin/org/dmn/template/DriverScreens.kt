@@ -1,9 +1,7 @@
 package org.dmn.template
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -19,10 +17,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -33,14 +29,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -64,15 +58,18 @@ fun PhoneEntryScreen(onSendCode: () -> Unit) {
             Spacer(Modifier.height(12.dp))
             OutlinedTextField(
                 value = phone,
-                onValueChange = { phone = it },
+                onValueChange = { input ->
+                    if (input.length <= 11 && input.all { it.isDigit() }) phone = input
+                },
                 placeholder = { Text("080X XXX XXXX", color = Color(0x61FFFFFF)) },
+                supportingText = { Text("${phone.length}/11 digits", color = PuMuted) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                 modifier = Modifier.fillMaxWidth(),
                 colors = fieldColors()
             )
             Spacer(Modifier.height(24.dp))
-            PrimaryButton("Send Code", onSendCode)
+            PrimaryButton("Send Code", onSendCode, enabled = phone.length == 11 && phone.startsWith("0"))
         }
     }
 }
@@ -119,9 +116,13 @@ fun CodeEntryScreen(onVerified: () -> Unit, onBack: () -> Unit) {
 }
 
 @Composable
-fun DriverHomeScreen(onOpenRequest: (String) -> Unit) {
-    var online by rememberSaveable { mutableStateOf(false) }
-    val requests = remember { DriverRepository.requests() }
+fun DriverHomeScreen(
+    online: Boolean,
+    onOnlineChange: (Boolean) -> Unit,
+    onOpenRequest: (String) -> Unit
+) {
+    // Nearest pickup first. With live data this list refreshes as requests change.
+    val requests = remember { DriverRepository.requests().sortedBy { it.etaMinutes } }
 
     Surface(modifier = Modifier.fillMaxSize(), color = PuNavy) {
         Column(modifier = Modifier.fillMaxSize().systemBarsPadding()) {
@@ -138,14 +139,14 @@ fun DriverHomeScreen(onOpenRequest: (String) -> Unit) {
                         color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold
                     )
                     Text(
-                        if (online) "${requests.size} ride requests nearby"
-                        else "Go online to see ride requests",
+                        if (online) "${requests.size} ride requests · nearest first"
+                        else "Go online to accept rides",
                         color = PuMuted, fontSize = 13.sp
                     )
                 }
                 Switch(
                     checked = online,
-                    onCheckedChange = { online = it },
+                    onCheckedChange = onOnlineChange,
                     colors = SwitchDefaults.colors(
                         checkedThumbColor = PuAmberInk,
                         checkedTrackColor = PuAmber,
@@ -156,25 +157,13 @@ fun DriverHomeScreen(onOpenRequest: (String) -> Unit) {
                 )
             }
 
-            if (online) {
-                LazyColumn(
-                    modifier = Modifier.fillMaxWidth().weight(1f),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    items(requests) { request ->
-                        RequestCard(request) { onOpenRequest(request.id) }
-                    }
-                }
-            } else {
-                Box(
-                    modifier = Modifier.fillMaxWidth().weight(1f).padding(32.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        "Flip the switch above when you're ready to drive.",
-                        color = PuMuted, textAlign = TextAlign.Center
-                    )
+            LazyColumn(
+                modifier = Modifier.fillMaxWidth().weight(1f),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(requests) { request ->
+                    RequestCard(request) { onOpenRequest(request.id) }
                 }
             }
         }
@@ -197,24 +186,32 @@ private fun RequestCard(r: RideRequest, onClick: () -> Unit) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(naira(r.fare), color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Bold)
-                if (r.isFairFare) Pill("Fair fare", PuAmber, PuAmberInk)
+                if (isFairRate(r)) Pill("Fair fare", PuAmber, PuAmberInk)
             }
             Spacer(Modifier.height(2.dp))
-            Text(
-                "${naira(perKm(r))}/km · $km km · pickup in ${r.etaMinutes} min",
-                color = PuMuted, fontSize = 13.sp
-            )
-            Spacer(Modifier.height(12.dp))
-            Text("From  ${r.pickup}", color = Color.White, fontSize = 15.sp)
-            Text("To  ${r.dropoff}", color = Color.White, fontSize = 15.sp)
-            Spacer(Modifier.height(12.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Pill(r.paymentMethod, Color(0xFF2A3A66), Color.White)
-                Spacer(Modifier.width(10.dp))
                 Text(
-                    "${r.riderName} · ★ ${r.riderRating} (${r.riderReviews})",
+                    "${naira(perKm(r))}/km",
+                    color = PuAmber, fontSize = 18.sp, fontWeight = FontWeight.Bold
+                )
+                Text(
+                    "  ·  $km km  ·  ${r.etaMinutes} min away",
                     color = PuMuted, fontSize = 13.sp
                 )
+            }
+            Spacer(Modifier.height(10.dp))
+            Text("From  ${r.pickup}", color = Color.White, fontSize = 15.sp)
+            Text("To  ${r.dropoff}", color = Color.White, fontSize = 15.sp)
+            Spacer(Modifier.height(10.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                RiderAvatar(r.riderName, 24.dp)
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    "${r.riderName} · ★ ${r.riderRating}",
+                    color = PuMuted, fontSize = 12.sp
+                )
+                Spacer(Modifier.weight(1f))
+                Pill(r.paymentMethod, Color(0xFF2A3A66), Color.White, 11.sp)
             }
         }
     }
@@ -222,17 +219,8 @@ private fun RequestCard(r: RideRequest, onClick: () -> Unit) {
 
 @Composable
 fun RequestDetailScreen(request: RideRequest, onBack: () -> Unit, onAccepted: () -> Unit) {
-    var showCounter by remember { mutableStateOf(false) }
-    var selectedCounter by remember { mutableStateOf<Int?>(null) }
     var dialogMessage by remember { mutableStateOf<String?>(null) }
-
-    // Counter buttons sit around the fair fare (-10%, fair, +10%), never above +10%.
-    val counterOptions = remember(request) {
-        listOf(90, 100, 110)
-            .map { pct -> roundTo100(request.fairFare * pct / 100) }
-            .filter { it != request.fare }
-            .distinct()
-    }
+    val counters = remember(request) { counterOffers(request.fare) }
     val km = "%.1f".format(request.distanceKm)
 
     Surface(modifier = Modifier.fillMaxSize(), color = PuNavy) {
@@ -245,79 +233,72 @@ fun RequestDetailScreen(request: RideRequest, onBack: () -> Unit, onAccepted: ()
             TextButton(onClick = onBack) {
                 Text("← Back to requests", color = PuMuted)
             }
-            Spacer(Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(naira(request.fare), color = Color.White, fontSize = 40.sp, fontWeight = FontWeight.Bold)
-                if (request.isFairFare) {
+                if (isFairRate(request)) {
                     Spacer(Modifier.width(12.dp))
                     Pill("Fair fare", PuAmber, PuAmberInk)
                 }
             }
-            Text(
-                "${naira(perKm(request))}/km · $km km · pickup in ${request.etaMinutes} min",
-                color = PuMuted, fontSize = 14.sp
-            )
-            Spacer(Modifier.height(20.dp))
-
-            InfoCard {
-                Text("PICKUP", color = PuMuted, fontSize = 11.sp)
-                Text(request.pickup, color = Color.White, fontSize = 16.sp)
-                Spacer(Modifier.height(12.dp))
-                Text("DROP-OFF", color = PuMuted, fontSize = 11.sp)
-                Text(request.dropoff, color = Color.White, fontSize = 16.sp)
-            }
-            Spacer(Modifier.height(16.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Pill(request.paymentMethod, Color(0xFF2A3A66), Color.White)
+                Text(
+                    "${naira(perKm(request))}/km",
+                    color = PuAmber, fontSize = 20.sp, fontWeight = FontWeight.Bold
+                )
+                Text(
+                    "  ·  $km km  ·  ${request.etaMinutes} min away",
+                    color = PuMuted, fontSize = 14.sp
+                )
+            }
+            Spacer(Modifier.height(10.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                RiderAvatar(request.riderName, 32.dp)
                 Spacer(Modifier.width(10.dp))
                 Text(
                     "${request.riderName} · ★ ${request.riderRating} (${request.riderReviews})",
                     color = PuMuted, fontSize = 14.sp
                 )
+                Spacer(Modifier.weight(1f))
+                Pill(request.paymentMethod, Color(0xFF2A3A66), Color.White, 11.sp)
             }
+            Spacer(Modifier.height(12.dp))
 
-            Spacer(Modifier.weight(1f))
+            MapPlaceholder(Modifier.weight(1f))
 
-            if (showCounter) {
-                Text("Your counter offer", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(12.dp))
+            InfoCard {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    StopMarker("A", Color(0xFF3B6BFF))
+                    Spacer(Modifier.width(10.dp))
+                    Text(request.pickup, color = Color.White, fontSize = 15.sp)
+                }
                 Spacer(Modifier.height(8.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    counterOptions.forEach { amount ->
-                        val selected = selectedCounter == amount
-                        OutlinedButton(
-                            onClick = { selectedCounter = amount },
-                            modifier = Modifier.weight(1f),
-                            border = BorderStroke(1.dp, if (selected) PuAmber else Color(0x66FFFFFF)),
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                containerColor = if (selected) Color(0x33FF8A1E) else Color.Transparent
-                            )
-                        ) {
-                            Text(naira(amount), color = if (selected) PuAmber else Color.White)
-                        }
-                    }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    StopMarker("B", Color(0xFF1FA463))
+                    Spacer(Modifier.width(10.dp))
+                    Text(request.dropoff, color = Color.White, fontSize = 15.sp)
                 }
-                Spacer(Modifier.height(10.dp))
-                PrimaryButton(
-                    text = "Send counter",
-                    enabled = selectedCounter != null,
-                    onClick = {
-                        selectedCounter?.let { dialogMessage = "Counter of ${naira(it)} sent." }
-                    }
-                )
-            } else {
-                PrimaryButton(
-                    text = "Accept ${naira(request.fare)}",
-                    onClick = onAccepted
-                )
             }
-            Spacer(Modifier.height(10.dp))
-            OutlineButton(
-                text = if (showCounter) "Cancel counter" else "Counter offer",
-                onClick = {
-                    showCounter = !showCounter
-                    selectedCounter = null
+            Spacer(Modifier.height(12.dp))
+
+            PrimaryButton(text = "Accept ${naira(request.fare)}", onClick = onAccepted)
+
+            if (counters.isNotEmpty()) {
+                Spacer(Modifier.height(10.dp))
+                Text("Or ask for more", color = PuMuted, fontSize = 12.sp)
+                Spacer(Modifier.height(6.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    counters.forEach { amount ->
+                        OutlineButton(
+                            text = naira(amount),
+                            onClick = {
+                                dialogMessage = "Counter of ${naira(amount)} sent to ${request.riderName}."
+                            },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
                 }
-            )
+            }
         }
     }
 
