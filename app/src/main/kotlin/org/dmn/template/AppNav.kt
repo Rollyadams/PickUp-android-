@@ -3,6 +3,10 @@ package org.dmn.template
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavType
@@ -19,6 +23,7 @@ private fun NavBackStackEntry.requestOrNull(): RideRequest? =
 @Composable
 fun PickUpNav() {
     val navController = rememberNavController()
+    var online by rememberSaveable { mutableStateOf(false) }
 
     MaterialTheme(
         colorScheme = darkColorScheme(
@@ -46,6 +51,8 @@ fun PickUpNav() {
             }
             composable("home") {
                 DriverHomeScreen(
+                    online = online,
+                    onOnlineChange = { online = it },
                     onOpenRequest = { id -> navController.navigate("request/$id") }
                 )
             }
@@ -55,6 +62,7 @@ fun PickUpNav() {
                         request = request,
                         onBack = { navController.popBackStack() },
                         onAccepted = {
+                            online = true
                             navController.navigate("pickup/${request.id}") {
                                 popUpTo("home")
                             }
