@@ -1,15 +1,40 @@
 package org.dmn.template
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -18,57 +43,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-
-val PuNavy = Color(0xFF101A33)
-val PuNavy2 = Color(0xFF16223F)
-val PuAmber = Color(0xFFFF8A1E)
-val PuAmberInk = Color(0xFF3A1E00)
-val PuMuted = Color(0xB3FFFFFF)
-
-private fun naira(amount: Int): String = "₦" + "%,d".format(amount)
-private fun perKm(r: RideRequest): Int = (r.fare / r.distanceKm).toInt()
-private fun roundTo100(x: Int): Int = ((x + 50) / 100) * 100
-
-@Composable
-private fun fieldColors() = OutlinedTextFieldDefaults.colors(
-    focusedTextColor = Color.White,
-    unfocusedTextColor = Color.White,
-    focusedContainerColor = PuNavy2,
-    unfocusedContainerColor = PuNavy2,
-    focusedBorderColor = PuAmber,
-    unfocusedBorderColor = Color(0x66FFFFFF),
-    cursorColor = PuAmber
-)
-
-@Composable
-private fun PrimaryButton(text: String, onClick: () -> Unit, enabled: Boolean = true) {
-    Button(
-        onClick = onClick,
-        enabled = enabled,
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(52.dp),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = PuAmber,
-            contentColor = PuAmberInk,
-            disabledContainerColor = Color(0x33FF8A1E),
-            disabledContentColor = Color(0x66FFFFFF)
-        )
-    ) {
-        Text(text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-    }
-}
-
-@Composable
-private fun Pill(text: String, bg: Color, fg: Color) {
-    Box(
-        modifier = Modifier
-            .background(bg, RoundedCornerShape(50))
-            .padding(horizontal = 10.dp, vertical = 4.dp)
-    ) {
-        Text(text, color = fg, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-    }
-}
 
 @Composable
 fun PhoneEntryScreen(onSendCode: () -> Unit) {
@@ -146,7 +120,7 @@ fun CodeEntryScreen(onVerified: () -> Unit, onBack: () -> Unit) {
 
 @Composable
 fun DriverHomeScreen(onOpenRequest: (String) -> Unit) {
-    var online by remember { mutableStateOf(false) }
+    var online by rememberSaveable { mutableStateOf(false) }
     val requests = remember { DriverRepository.requests() }
 
     Surface(modifier = Modifier.fillMaxSize(), color = PuNavy) {
@@ -247,13 +221,17 @@ private fun RequestCard(r: RideRequest, onClick: () -> Unit) {
 }
 
 @Composable
-fun RequestDetailScreen(request: RideRequest, onBack: () -> Unit) {
+fun RequestDetailScreen(request: RideRequest, onBack: () -> Unit, onAccepted: () -> Unit) {
     var showCounter by remember { mutableStateOf(false) }
     var selectedCounter by remember { mutableStateOf<Int?>(null) }
     var dialogMessage by remember { mutableStateOf<String?>(null) }
 
+    // Counter buttons sit around the fair fare (-10%, fair, +10%), never above +10%.
     val counterOptions = remember(request) {
-        listOf(5, 10).map { pct -> roundTo100(request.fare * (100 + pct) / 100) }
+        listOf(90, 100, 110)
+            .map { pct -> roundTo100(request.fairFare * pct / 100) }
+            .filter { it != request.fare }
+            .distinct()
     }
     val km = "%.1f".format(request.distanceKm)
 
@@ -281,18 +259,12 @@ fun RequestDetailScreen(request: RideRequest, onBack: () -> Unit) {
             )
             Spacer(Modifier.height(20.dp))
 
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = PuNavy2)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text("PICKUP", color = PuMuted, fontSize = 11.sp)
-                    Text(request.pickup, color = Color.White, fontSize = 16.sp)
-                    Spacer(Modifier.height(12.dp))
-                    Text("DROP-OFF", color = PuMuted, fontSize = 11.sp)
-                    Text(request.dropoff, color = Color.White, fontSize = 16.sp)
-                }
+            InfoCard {
+                Text("PICKUP", color = PuMuted, fontSize = 11.sp)
+                Text(request.pickup, color = Color.White, fontSize = 16.sp)
+                Spacer(Modifier.height(12.dp))
+                Text("DROP-OFF", color = PuMuted, fontSize = 11.sp)
+                Text(request.dropoff, color = Color.White, fontSize = 16.sp)
             }
             Spacer(Modifier.height(16.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -335,41 +307,24 @@ fun RequestDetailScreen(request: RideRequest, onBack: () -> Unit) {
             } else {
                 PrimaryButton(
                     text = "Accept ${naira(request.fare)}",
-                    onClick = {
-                        dialogMessage = "Ride accepted. The trip screens come in the next batch."
-                    }
+                    onClick = onAccepted
                 )
             }
             Spacer(Modifier.height(10.dp))
-            OutlinedButton(
-                onClick = { showCounter = !showCounter },
-                modifier = Modifier.fillMaxWidth().height(52.dp),
-                border = BorderStroke(1.dp, PuAmber)
-            ) {
-                Text(
-                    if (showCounter) "Cancel counter" else "Counter offer",
-                    color = PuAmber, fontSize = 16.sp, fontWeight = FontWeight.Bold
-                )
-            }
+            OutlineButton(
+                text = if (showCounter) "Cancel counter" else "Counter offer",
+                onClick = {
+                    showCounter = !showCounter
+                    selectedCounter = null
+                }
+            )
         }
     }
 
     dialogMessage?.let { message ->
-        AlertDialog(
-            onDismissRequest = { dialogMessage = null },
-            confirmButton = {
-                TextButton(onClick = {
-                    dialogMessage = null
-                    onBack()
-                }) {
-                    Text("OK", color = PuAmber)
-                }
-            },
-            title = { Text("Skeleton build") },
-            text = { Text(message) },
-            containerColor = PuNavy2,
-            titleContentColor = Color.White,
-            textContentColor = PuMuted
-        )
+        SkeletonDialog(message = message, onOk = {
+            dialogMessage = null
+            onBack()
+        })
     }
 }
