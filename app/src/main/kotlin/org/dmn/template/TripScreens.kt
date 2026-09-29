@@ -109,7 +109,7 @@ fun PickupNavigationScreen(
             if (arrived) {
                 PrimaryButton("Start trip", onStartTrip)
             } else {
-                PrimaryButton("I've arrived") { arrived = true }
+                PrimaryButton("I've arrived", { arrived = true })
             }
             TextButton(
                 onClick = { showCancel = true },
@@ -301,4 +301,3 @@ fun TripCompleteScreen(request: RideRequest, onDone: () -> Unit) {
         }
     }
 }
-
