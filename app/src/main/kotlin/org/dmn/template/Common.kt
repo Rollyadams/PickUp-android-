@@ -3,11 +3,14 @@ package org.dmn.template
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -19,9 +22,13 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -37,6 +44,13 @@ fun naira(amount: Int): String = "₦" + "%,d".format(amount)
 fun perKm(r: RideRequest): Int = (r.fare / r.distanceKm).toInt()
 
 fun roundTo100(x: Int): Int = ((x + 50) / 100) * 100
+
+/** "Fair fare" tag shows only on rides paying a high rate per km. */
+fun isFairRate(r: RideRequest): Boolean = perKm(r) >= 500
+
+/** The two counter prices a driver can ask for: 10% and 20% above the offer. */
+fun counterOffers(fare: Int): List<Int> =
+    listOf(110, 120).map { roundTo100(fare * it / 100) }.distinct().filter { it != fare }
 
 @Composable
 fun fieldColors() = OutlinedTextFieldDefaults.colors(
@@ -85,13 +99,13 @@ fun OutlineButton(
 }
 
 @Composable
-fun Pill(text: String, bg: Color, fg: Color) {
+fun Pill(text: String, bg: Color, fg: Color, fontSize: TextUnit = 12.sp) {
     Box(
         modifier = Modifier
             .background(bg, RoundedCornerShape(50))
             .padding(horizontal = 10.dp, vertical = 4.dp)
     ) {
-        Text(text, color = fg, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        Text(text, color = fg, fontSize = fontSize, fontWeight = FontWeight.Bold)
     }
 }
 
@@ -117,4 +131,54 @@ fun SkeletonDialog(message: String, onOk: () -> Unit) {
         titleContentColor = Color.White,
         textContentColor = PuMuted
     )
+}
+
+@Composable
+fun RiderAvatar(name: String, size: Dp = 28.dp) {
+    Box(
+        modifier = Modifier
+            .size(size)
+            .clip(CircleShape)
+            .background(Color(0xFF2A3A66)),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            name.take(1).uppercase(),
+            color = Color.White,
+            fontSize = (size.value * 0.45f).sp,
+            fontWeight = FontWeight.Bold
+        )
+    }
+}
+
+@Composable
+fun StopMarker(letter: String, color: Color) {
+    Box(
+        modifier = Modifier
+            .size(22.dp)
+            .clip(CircleShape)
+            .background(color),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(letter, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+    }
+}
+
+/** Stand-in for the real Google Map that comes later. */
+@Composable
+fun MapPlaceholder(modifier: Modifier = Modifier, content: @Composable BoxScope.() -> Unit = {}) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color(0xFF1B2A4E))
+    ) {
+        Text(
+            "Map view",
+            color = Color(0x66FFFFFF),
+            fontSize = 14.sp,
+            modifier = Modifier.align(Alignment.Center)
+        )
+        content()
+    }
 }
