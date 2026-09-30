@@ -111,7 +111,11 @@ fun PickUpNav() {
                         },
                         onItem = { label ->
                             scope.launch { drawerState.close() }
-                            menuMessage = "$label comes in a later batch."
+                            if (label == "Profile & documents") {
+                                navController.navigate("profile") { launchSingleTop = true }
+                            } else {
+                                menuMessage = "$label comes in a later batch."
+                            }
                         },
                         onLogout = {
                             scope.launch { drawerState.close() }
@@ -135,12 +139,33 @@ fun PickUpNav() {
                         composable("code") {
                             CodeEntryScreen(
                                 onVerified = {
-                                    navController.navigate("home") {
+                                    navController.navigate("onboarding") {
                                         popUpTo("phone") { inclusive = true }
                                     }
                                 },
                                 onBack = { navController.popBackStack() }
                             )
+                        }
+                        composable("onboarding") {
+                            OnboardingScreen(
+                                onSubmitted = {
+                                    navController.navigate("pending") {
+                                        popUpTo("onboarding") { inclusive = true }
+                                    }
+                                }
+                            )
+                        }
+                        composable("pending") {
+                            VerificationPendingScreen(
+                                onDemoContinue = {
+                                    navController.navigate("home") {
+                                        popUpTo("pending") { inclusive = true }
+                                    }
+                                }
+                            )
+                        }
+                        composable("profile") {
+                            ProfileScreen(onBack = { navController.popBackStack() })
                         }
                         composable("home") {
                             DriverHomeScreen(
