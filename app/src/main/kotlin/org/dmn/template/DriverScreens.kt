@@ -70,6 +70,8 @@ fun PhoneEntryScreen(onSendCode: () -> Unit) {
             )
             Spacer(Modifier.height(24.dp))
             PrimaryButton("Send Code", onSendCode, enabled = phone.length == 11 && phone.startsWith("0"))
+            Spacer(Modifier.height(16.dp))
+            Text("Build ${appVersion()}", color = PuMuted, fontSize = 11.sp)
         }
     }
 }
@@ -166,6 +168,11 @@ fun DriverHomeScreen(
                     RequestCard(request) { onOpenRequest(request.id) }
                 }
             }
+            Text(
+                "Build ${appVersion()}",
+                color = PuMuted, fontSize = 11.sp,
+                modifier = Modifier.padding(start = 20.dp, top = 4.dp, bottom = 6.dp)
+            )
         }
     }
 }
@@ -262,23 +269,15 @@ fun RequestDetailScreen(request: RideRequest, onBack: () -> Unit, onAccepted: ()
                 Pill(request.paymentMethod, Color(0xFF2A3A66), Color.White, 11.sp)
             }
             Spacer(Modifier.height(12.dp))
+            InfoCard {
+                AddressRow("A", Color(0xFF3B6BFF), request.pickup)
+                Spacer(Modifier.height(8.dp))
+                AddressRow("B", Color(0xFF1FA463), request.dropoff)
+            }
+            Spacer(Modifier.height(12.dp))
 
             MapPlaceholder(Modifier.weight(1f))
 
-            Spacer(Modifier.height(12.dp))
-            InfoCard {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    StopMarker("A", Color(0xFF3B6BFF))
-                    Spacer(Modifier.width(10.dp))
-                    Text(request.pickup, color = Color.White, fontSize = 15.sp)
-                }
-                Spacer(Modifier.height(8.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    StopMarker("B", Color(0xFF1FA463))
-                    Spacer(Modifier.width(10.dp))
-                    Text(request.dropoff, color = Color.White, fontSize = 15.sp)
-                }
-            }
             Spacer(Modifier.height(12.dp))
 
             PrimaryButton(text = "Accept ${naira(request.fare)}", onClick = onAccepted)
