@@ -32,6 +32,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -43,13 +44,47 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-val PuBg = Color(0xFFFFFFFF)
-val PuCard = Color(0xFFF4F5F8)
-val PuInk = Color(0xFF101A33)
-val PuMuted = Color(0xFF6B7280)
-val PuChip = Color(0xFFE8EAF0)
-val PuLine = Color(0xFFD5D9E2)
-val PuMap = Color(0xFFE6EBF2)
+/** Colours that change between light mode and dark mode. */
+class PuColors(
+    val bg: Color,
+    val card: Color,
+    val ink: Color,
+    val muted: Color,
+    val chip: Color,
+    val line: Color,
+    val map: Color
+)
+
+val LightPu = PuColors(
+    bg = Color(0xFFFFFFFF),
+    card = Color(0xFFF4F5F8),
+    ink = Color(0xFF101A33),
+    muted = Color(0xFF6B7280),
+    chip = Color(0xFFE8EAF0),
+    line = Color(0xFFD5D9E2),
+    map = Color(0xFFE6EBF2)
+)
+
+val DarkPu = PuColors(
+    bg = Color(0xFF101A33),
+    card = Color(0xFF16223F),
+    ink = Color(0xFFFFFFFF),
+    muted = Color(0xFFB3BAC9),
+    chip = Color(0xFF2A3A66),
+    line = Color(0xFF3A4668),
+    map = Color(0xFF1B2A4E)
+)
+
+val LocalPu = staticCompositionLocalOf { LightPu }
+
+val PuBg: Color @Composable get() = LocalPu.current.bg
+val PuCard: Color @Composable get() = LocalPu.current.card
+val PuInk: Color @Composable get() = LocalPu.current.ink
+val PuMuted: Color @Composable get() = LocalPu.current.muted
+val PuChip: Color @Composable get() = LocalPu.current.chip
+val PuLine: Color @Composable get() = LocalPu.current.line
+val PuMap: Color @Composable get() = LocalPu.current.map
+
 val PuAmber = Color(0xFFFF8A1E)
 val PuAmberInk = Color(0xFF3A1E00)
 val PuGood = Color(0xFF1FA463)
@@ -325,5 +360,20 @@ fun MoneyRow(label: String, value: String, strong: Boolean = false, valueColor: 
             fontSize = if (strong) 22.sp else 14.sp,
             fontWeight = FontWeight.Bold
         )
+    }
+}
+
+/** Round hamburger button that opens the side menu. */
+@Composable
+fun MenuButton(onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .size(44.dp)
+            .clip(CircleShape)
+            .background(PuCard)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Text("☰", color = PuInk, fontSize = 20.sp)
     }
 }
