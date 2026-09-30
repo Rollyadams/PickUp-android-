@@ -7,7 +7,11 @@ android {
 
         defaultConfig {
                 applicationId = "org.dmn.template"
-                versionCode = 1
-                versionName = "1.0"
+                // GitHub Actions passes its run number, so every build has a higher
+                // version code and phones always accept it as an update.
+                val buildNumber = (project.findProperty("appBuildNumber") as String?)
+                        ?.toIntOrNull() ?: 1
+                versionCode = buildNumber
+                versionName = "0.1.$buildNumber"
         }
 }
