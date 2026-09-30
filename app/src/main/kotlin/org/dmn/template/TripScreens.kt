@@ -78,7 +78,7 @@ private fun NavigateButton(label: String, onClick: () -> Unit, modifier: Modifie
     Button(
         onClick = onClick,
         modifier = modifier,
-        colors = ButtonDefaults.buttonColors(containerColor = PuInk, contentColor = Color.White)
+        colors = ButtonDefaults.buttonColors(containerColor = PuInk, contentColor = PuBg)
     ) {
         Text("➤  $label", fontSize = 15.sp, fontWeight = FontWeight.Bold)
     }
