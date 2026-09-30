@@ -177,20 +177,9 @@ fun PickupNavigationScreen(
                     }
                     Spacer(Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            StopMarker("A", Color(0xFF3B6BFF))
-                            Spacer(Modifier.width(8.dp))
-                            Text(
-                                request.pickup,
-                                color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold
-                            )
-                        }
+                        AddressRow("A", Color(0xFF3B6BFF), request.pickup, Color.White, 16.sp, true)
                         Spacer(Modifier.height(8.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            StopMarker("B", Color(0xFF1FA463))
-                            Spacer(Modifier.width(8.dp))
-                            Text(request.dropoff, color = PuMuted, fontSize = 14.sp)
-                        }
+                        AddressRow("B", Color(0xFF1FA463), request.dropoff, PuMuted, 14.sp)
                     }
                     Spacer(Modifier.width(8.dp))
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -340,20 +329,9 @@ fun TripInProgressScreen(request: RideRequest, onEndTrip: () -> Unit) {
             Spacer(Modifier.height(12.dp))
 
             InfoCard {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    StopMarker("A", Color(0xFF3B6BFF))
-                    Spacer(Modifier.width(10.dp))
-                    Text(request.pickup, color = PuMuted, fontSize = 14.sp)
-                }
+                AddressRow("A", Color(0xFF3B6BFF), request.pickup, PuMuted, 14.sp)
                 Spacer(Modifier.height(8.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    StopMarker("B", Color(0xFF1FA463))
-                    Spacer(Modifier.width(10.dp))
-                    Text(
-                        request.dropoff,
-                        color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold
-                    )
-                }
+                AddressRow("B", Color(0xFF1FA463), request.dropoff, Color.White, 16.sp, true)
             }
             Spacer(Modifier.height(12.dp))
 
@@ -516,4 +494,3 @@ fun TripCompleteScreen(request: RideRequest, onDone: () -> Unit) {
         }
     }
 }
-
