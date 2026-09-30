@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -30,7 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 @Composable
-fun IncomeScreen() {
+fun IncomeScreen(onMenu: () -> Unit) {
     var period by remember { mutableIntStateOf(0) }
     var showPlan by remember { mutableStateOf(false) }
 
@@ -49,7 +50,11 @@ fun IncomeScreen() {
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp, vertical = 16.dp)
         ) {
-            Text("Income", color = PuInk, fontSize = 26.sp, fontWeight = FontWeight.Bold)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                MenuButton(onClick = onMenu)
+                Spacer(Modifier.width(12.dp))
+                Text("Income", color = PuInk, fontSize = 26.sp, fontWeight = FontWeight.Bold)
+            }
             Spacer(Modifier.height(14.dp))
             SegmentedToggle(listOf("Day", "Week", "Month"), period) { period = it }
             Spacer(Modifier.height(18.dp))
@@ -115,7 +120,7 @@ fun IncomeScreen() {
 }
 
 @Composable
-fun WalletScreen() {
+fun WalletScreen(onMenu: () -> Unit) {
     var showTopUp by remember { mutableStateOf(false) }
     var showAccount by remember { mutableStateOf(false) }
 
@@ -131,7 +136,11 @@ fun WalletScreen() {
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp, vertical = 16.dp)
         ) {
-            Text("Wallet", color = PuInk, fontSize = 26.sp, fontWeight = FontWeight.Bold)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                MenuButton(onClick = onMenu)
+                Spacer(Modifier.width(12.dp))
+                Text("Wallet", color = PuInk, fontSize = 26.sp, fontWeight = FontWeight.Bold)
+            }
             Spacer(Modifier.height(14.dp))
 
             InfoCard {
