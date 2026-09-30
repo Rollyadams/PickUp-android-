@@ -122,7 +122,8 @@ fun CodeEntryScreen(onVerified: () -> Unit, onBack: () -> Unit) {
 fun DriverHomeScreen(
     online: Boolean,
     onOnlineChange: (Boolean) -> Unit,
-    onOpenRequest: (String) -> Unit
+    onOpenRequest: (String) -> Unit,
+    onMenu: () -> Unit
 ) {
     // Nearest pickup first. With live data this list refreshes as requests change.
     val requests = remember { DriverRepository.requests().sortedBy { it.etaMinutes } }
@@ -136,7 +137,9 @@ fun DriverHomeScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Column {
+                MenuButton(onClick = onMenu)
+                Spacer(Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
                         if (online) "You're online" else "You're offline",
                         color = PuInk, fontSize = 20.sp, fontWeight = FontWeight.Bold
