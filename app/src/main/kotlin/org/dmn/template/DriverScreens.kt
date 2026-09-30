@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -42,7 +43,7 @@ import androidx.compose.ui.unit.sp
 fun PhoneEntryScreen(onSendCode: () -> Unit) {
     var phone by remember { mutableStateOf("") }
 
-    Surface(modifier = Modifier.fillMaxSize(), color = PuNavy) {
+    Surface(modifier = Modifier.fillMaxSize(), color = PuBg) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -51,7 +52,7 @@ fun PhoneEntryScreen(onSendCode: () -> Unit) {
                 .padding(horizontal = 24.dp),
             verticalArrangement = Arrangement.Center
         ) {
-            Text("Pick", color = Color.White, fontSize = 34.sp, fontWeight = FontWeight.Bold)
+            Text("Pick", color = PuInk, fontSize = 34.sp, fontWeight = FontWeight.Bold)
             Text("Up", color = PuAmber, fontSize = 34.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(40.dp))
             Text("Enter your phone number", color = PuMuted, fontSize = 16.sp)
@@ -61,7 +62,7 @@ fun PhoneEntryScreen(onSendCode: () -> Unit) {
                 onValueChange = { input ->
                     if (input.length <= 11 && input.all { it.isDigit() }) phone = input
                 },
-                placeholder = { Text("080X XXX XXXX", color = Color(0x61FFFFFF)) },
+                placeholder = { Text("080X XXX XXXX", color = PuMuted) },
                 supportingText = { Text("${phone.length}/11 digits", color = PuMuted) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
@@ -80,7 +81,7 @@ fun PhoneEntryScreen(onSendCode: () -> Unit) {
 fun CodeEntryScreen(onVerified: () -> Unit, onBack: () -> Unit) {
     var code by remember { mutableStateOf("") }
 
-    Surface(modifier = Modifier.fillMaxSize(), color = PuNavy) {
+    Surface(modifier = Modifier.fillMaxSize(), color = PuBg) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -89,7 +90,7 @@ fun CodeEntryScreen(onVerified: () -> Unit, onBack: () -> Unit) {
                 .padding(horizontal = 24.dp),
             verticalArrangement = Arrangement.Center
         ) {
-            Text("Enter the code", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+            Text("Enter the code", color = PuInk, fontSize = 28.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(8.dp))
             Text("Skeleton build: any code works for now.", color = PuMuted, fontSize = 14.sp)
             Spacer(Modifier.height(20.dp))
@@ -98,7 +99,7 @@ fun CodeEntryScreen(onVerified: () -> Unit, onBack: () -> Unit) {
                 onValueChange = { input ->
                     if (input.length <= 6 && input.all { it.isDigit() }) code = input
                 },
-                placeholder = { Text("6-digit code", color = Color(0x61FFFFFF)) },
+                placeholder = { Text("6-digit code", color = PuMuted) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth(),
@@ -126,8 +127,8 @@ fun DriverHomeScreen(
     // Nearest pickup first. With live data this list refreshes as requests change.
     val requests = remember { DriverRepository.requests().sortedBy { it.etaMinutes } }
 
-    Surface(modifier = Modifier.fillMaxSize(), color = PuNavy) {
-        Column(modifier = Modifier.fillMaxSize().systemBarsPadding()) {
+    Surface(modifier = Modifier.fillMaxSize(), color = PuBg) {
+        Column(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -138,7 +139,7 @@ fun DriverHomeScreen(
                 Column {
                     Text(
                         if (online) "You're online" else "You're offline",
-                        color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold
+                        color = PuInk, fontSize = 20.sp, fontWeight = FontWeight.Bold
                     )
                     Text(
                         if (online) "${requests.size} ride requests · nearest first"
@@ -152,9 +153,9 @@ fun DriverHomeScreen(
                     colors = SwitchDefaults.colors(
                         checkedThumbColor = PuAmberInk,
                         checkedTrackColor = PuAmber,
-                        uncheckedThumbColor = Color(0x99FFFFFF),
-                        uncheckedTrackColor = PuNavy2,
-                        uncheckedBorderColor = Color(0x66FFFFFF)
+                        uncheckedThumbColor = PuMuted,
+                        uncheckedTrackColor = PuCard,
+                        uncheckedBorderColor = PuLine
                     )
                 )
             }
@@ -184,7 +185,7 @@ private fun RequestCard(r: RideRequest, onClick: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = PuNavy2)
+        colors = CardDefaults.cardColors(containerColor = PuCard)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -192,7 +193,7 @@ private fun RequestCard(r: RideRequest, onClick: () -> Unit) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(naira(r.fare), color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Bold)
+                Text(naira(r.fare), color = PuInk, fontSize = 26.sp, fontWeight = FontWeight.Bold)
                 if (isFairRate(r)) Pill("Fair fare", PuAmber, PuAmberInk)
             }
             Spacer(Modifier.height(2.dp))
@@ -207,8 +208,8 @@ private fun RequestCard(r: RideRequest, onClick: () -> Unit) {
                 )
             }
             Spacer(Modifier.height(10.dp))
-            Text("From  ${r.pickup}", color = Color.White, fontSize = 15.sp)
-            Text("To  ${r.dropoff}", color = Color.White, fontSize = 15.sp)
+            Text("From  ${r.pickup}", color = PuInk, fontSize = 15.sp)
+            Text("To  ${r.dropoff}", color = PuInk, fontSize = 15.sp)
             Spacer(Modifier.height(10.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 RiderAvatar(r.riderName, 24.dp)
@@ -218,7 +219,7 @@ private fun RequestCard(r: RideRequest, onClick: () -> Unit) {
                     color = PuMuted, fontSize = 12.sp
                 )
                 Spacer(Modifier.weight(1f))
-                Pill(r.paymentMethod, Color(0xFF2A3A66), Color.White, 11.sp)
+                Pill(r.paymentMethod, PuChip, PuInk, 11.sp)
             }
         }
     }
@@ -230,7 +231,7 @@ fun RequestDetailScreen(request: RideRequest, onBack: () -> Unit, onAccepted: ()
     val counters = remember(request) { counterOffers(request.fare) }
     val km = "%.1f".format(request.distanceKm)
 
-    Surface(modifier = Modifier.fillMaxSize(), color = PuNavy) {
+    Surface(modifier = Modifier.fillMaxSize(), color = PuBg) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -241,7 +242,7 @@ fun RequestDetailScreen(request: RideRequest, onBack: () -> Unit, onAccepted: ()
                 Text("← Back to requests", color = PuMuted)
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(naira(request.fare), color = Color.White, fontSize = 40.sp, fontWeight = FontWeight.Bold)
+                Text(naira(request.fare), color = PuInk, fontSize = 40.sp, fontWeight = FontWeight.Bold)
                 if (isFairRate(request)) {
                     Spacer(Modifier.width(12.dp))
                     Pill("Fair fare", PuAmber, PuAmberInk)
@@ -266,7 +267,7 @@ fun RequestDetailScreen(request: RideRequest, onBack: () -> Unit, onAccepted: ()
                     color = PuMuted, fontSize = 14.sp
                 )
                 Spacer(Modifier.weight(1f))
-                Pill(request.paymentMethod, Color(0xFF2A3A66), Color.White, 11.sp)
+                Pill(request.paymentMethod, PuChip, PuInk, 11.sp)
             }
             Spacer(Modifier.height(12.dp))
             InfoCard {
