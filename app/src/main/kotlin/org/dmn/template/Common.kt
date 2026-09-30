@@ -1,15 +1,24 @@
 package org.dmn.template
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.os.Build
+import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
@@ -22,10 +31,12 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
@@ -180,5 +191,58 @@ fun MapPlaceholder(modifier: Modifier = Modifier, content: @Composable BoxScope.
             modifier = Modifier.align(Alignment.Center)
         )
         content()
+    }
+}
+
+/** Copies text to the phone clipboard so it can be pasted straight into Google Maps. */
+fun copyToClipboard(context: Context, text: String) {
+    val manager = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+    manager.setPrimaryClip(ClipData.newPlainText("address", text))
+    // Android 13+ shows its own "copied" message.
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+        Toast.makeText(context, "Address copied", Toast.LENGTH_SHORT).show()
+    }
+}
+
+/** A pickup or drop-off line. Tap it to copy the address. */
+@Composable
+fun AddressRow(
+    letter: String,
+    markerColor: Color,
+    address: String,
+    textColor: Color = Color.White,
+    fontSize: TextUnit = 15.sp,
+    bold: Boolean = false
+) {
+    val context = LocalContext.current
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { copyToClipboard(context, address) },
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        StopMarker(letter, markerColor)
+        Spacer(Modifier.width(10.dp))
+        Text(
+            address,
+            color = textColor,
+            fontSize = fontSize,
+            fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal,
+            modifier = Modifier.weight(1f)
+        )
+        Text("Copy", color = PuMuted, fontSize = 11.sp)
+    }
+}
+
+/** The installed build, e.g. "0.1.26", so you can tell which APK is running. */
+@Composable
+fun appVersion(): String {
+    val context = LocalContext.current
+    return remember {
+        try {
+            context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "?"
+        } catch (e: Exception) {
+            "?"
+        }
     }
 }
