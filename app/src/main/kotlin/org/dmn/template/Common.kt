@@ -43,11 +43,16 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-val PuNavy = Color(0xFF101A33)
-val PuNavy2 = Color(0xFF16223F)
+val PuBg = Color(0xFFFFFFFF)
+val PuCard = Color(0xFFF4F5F8)
+val PuInk = Color(0xFF101A33)
+val PuMuted = Color(0xFF6B7280)
+val PuChip = Color(0xFFE8EAF0)
+val PuLine = Color(0xFFD5D9E2)
+val PuMap = Color(0xFFE6EBF2)
 val PuAmber = Color(0xFFFF8A1E)
 val PuAmberInk = Color(0xFF3A1E00)
-val PuMuted = Color(0xB3FFFFFF)
+val PuGood = Color(0xFF1FA463)
 val PuDanger = Color(0xFFE5484D)
 
 fun naira(amount: Int): String = "₦" + "%,d".format(amount)
@@ -55,6 +60,12 @@ fun naira(amount: Int): String = "₦" + "%,d".format(amount)
 fun perKm(r: RideRequest): Int = (r.fare / r.distanceKm).toInt()
 
 fun roundTo100(x: Int): Int = ((x + 50) / 100) * 100
+
+// PLACEHOLDERS until the real fee and tax rules are confirmed.
+const val FLAT_FEE = 1000
+
+/** 7.5% VAT on a fare (placeholder rule, to be confirmed with an accountant). */
+fun vatOn(fare: Int): Int = (fare * 75 + 500) / 1000
 
 /** "Fair fare" tag shows only on rides paying a high rate per km. */
 fun isFairRate(r: RideRequest): Boolean = perKm(r) >= 500
@@ -65,12 +76,12 @@ fun counterOffers(fare: Int): List<Int> =
 
 @Composable
 fun fieldColors() = OutlinedTextFieldDefaults.colors(
-    focusedTextColor = Color.White,
-    unfocusedTextColor = Color.White,
-    focusedContainerColor = PuNavy2,
-    unfocusedContainerColor = PuNavy2,
+    focusedTextColor = PuInk,
+    unfocusedTextColor = PuInk,
+    focusedContainerColor = PuCard,
+    unfocusedContainerColor = PuCard,
     focusedBorderColor = PuAmber,
-    unfocusedBorderColor = Color(0x66FFFFFF),
+    unfocusedBorderColor = PuLine,
     cursorColor = PuAmber
 )
 
@@ -86,7 +97,7 @@ fun PrimaryButton(text: String, onClick: () -> Unit, enabled: Boolean = true) {
             containerColor = PuAmber,
             contentColor = PuAmberInk,
             disabledContainerColor = Color(0x33FF8A1E),
-            disabledContentColor = Color(0x66FFFFFF)
+            disabledContentColor = PuMuted
         )
     ) {
         Text(text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
@@ -125,7 +136,7 @@ fun InfoCard(content: @Composable ColumnScope.() -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = PuNavy2)
+        colors = CardDefaults.cardColors(containerColor = PuCard)
     ) {
         Column(modifier = Modifier.padding(16.dp), content = content)
     }
@@ -138,8 +149,8 @@ fun SkeletonDialog(message: String, onOk: () -> Unit) {
         confirmButton = { TextButton(onClick = onOk) { Text("OK", color = PuAmber) } },
         title = { Text("Skeleton build") },
         text = { Text(message) },
-        containerColor = PuNavy2,
-        titleContentColor = Color.White,
+        containerColor = PuCard,
+        titleContentColor = PuInk,
         textContentColor = PuMuted
     )
 }
@@ -150,12 +161,12 @@ fun RiderAvatar(name: String, size: Dp = 28.dp) {
         modifier = Modifier
             .size(size)
             .clip(CircleShape)
-            .background(Color(0xFF2A3A66)),
+            .background(PuChip),
         contentAlignment = Alignment.Center
     ) {
         Text(
             name.take(1).uppercase(),
-            color = Color.White,
+            color = PuInk,
             fontSize = (size.value * 0.45f).sp,
             fontWeight = FontWeight.Bold
         )
@@ -182,11 +193,11 @@ fun MapPlaceholder(modifier: Modifier = Modifier, content: @Composable BoxScope.
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(Color(0xFF1B2A4E))
+            .background(PuMap)
     ) {
         Text(
             "Map view",
-            color = Color(0x66FFFFFF),
+            color = PuMuted,
             fontSize = 14.sp,
             modifier = Modifier.align(Alignment.Center)
         )
@@ -204,13 +215,13 @@ fun copyToClipboard(context: Context, text: String) {
     }
 }
 
-/** A pickup or drop-off line. Tap it to copy the address. */
+/** A pickup or drop-off line. Tapping it copies the address. */
 @Composable
 fun AddressRow(
     letter: String,
     markerColor: Color,
     address: String,
-    textColor: Color = Color.White,
+    textColor: Color = PuInk,
     fontSize: TextUnit = 15.sp,
     bold: Boolean = false
 ) {
@@ -230,7 +241,6 @@ fun AddressRow(
             fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal,
             modifier = Modifier.weight(1f)
         )
-        Text("Copy", color = PuMuted, fontSize = 11.sp)
     }
 }
 
@@ -244,5 +254,76 @@ fun appVersion(): String {
         } catch (e: Exception) {
             "?"
         }
+    }
+}
+
+/** Day / Week / Month style switch. */
+@Composable
+fun SegmentedToggle(options: List<String>, selected: Int, onSelect: (Int) -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(50))
+            .background(PuCard)
+            .padding(4.dp)
+    ) {
+        options.forEachIndexed { index, label ->
+            val on = index == selected
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(50))
+                    .background(if (on) PuAmber else Color.Transparent)
+                    .clickable { onSelect(index) }
+                    .padding(vertical = 10.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    label,
+                    color = if (on) PuAmberInk else PuMuted,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+    }
+}
+
+/** Small number-plus-caption tile used on Income and Performance. */
+@Composable
+fun StatTile(value: String, label: String, modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(14.dp))
+            .background(PuCard)
+            .padding(14.dp)
+    ) {
+        Text(value, color = PuInk, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        Text(label, color = PuMuted, fontSize = 12.sp)
+    }
+}
+
+/** One label-and-amount line, used on the receipt, Income and Wallet. */
+@Composable
+fun MoneyRow(label: String, value: String, strong: Boolean = false, valueColor: Color = PuInk) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 5.dp),
+        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            label,
+            color = if (strong) PuInk else PuMuted,
+            fontSize = if (strong) 18.sp else 14.sp,
+            fontWeight = if (strong) FontWeight.Bold else FontWeight.Normal
+        )
+        Text(
+            value,
+            color = valueColor,
+            fontSize = if (strong) 22.sp else 14.sp,
+            fontWeight = FontWeight.Bold
+        )
     }
 }
