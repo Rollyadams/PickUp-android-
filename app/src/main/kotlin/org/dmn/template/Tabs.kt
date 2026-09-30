@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Surface
@@ -83,7 +84,7 @@ private fun ratingTrend(stats: PerformanceStats): Pair<String, Boolean> {
 }
 
 @Composable
-fun PerformanceScreen() {
+fun PerformanceScreen(onMenu: () -> Unit) {
     var window by remember { mutableIntStateOf(0) }
     val stats = DriverRepository.performance(window)
     val (trendText, trendUp) = ratingTrend(stats)
@@ -96,7 +97,11 @@ fun PerformanceScreen() {
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp, vertical = 16.dp)
         ) {
-            Text("Performance", color = PuInk, fontSize = 26.sp, fontWeight = FontWeight.Bold)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                MenuButton(onClick = onMenu)
+                Spacer(Modifier.width(12.dp))
+                Text("Performance", color = PuInk, fontSize = 26.sp, fontWeight = FontWeight.Bold)
+            }
             Spacer(Modifier.height(14.dp))
             SegmentedToggle(listOf("7 days", "30 days", "90 days"), window) { window = it }
             Spacer(Modifier.height(16.dp))
