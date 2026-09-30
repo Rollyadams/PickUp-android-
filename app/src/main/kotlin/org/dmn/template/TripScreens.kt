@@ -64,9 +64,6 @@ private fun openNavigation(context: Context, destination: String): Boolean {
 private fun clock(totalSeconds: Int): String =
     "%02d:%02d".format(totalSeconds / 60, totalSeconds % 60)
 
-// PLACEHOLDER: 7.5% VAT on the fare. Real rule to be confirmed with an accountant.
-private fun vatOn(fare: Int): Int = (fare * 75 + 500) / 1000
-
 private val cancelReasons = listOf(
     "Rider not at pickup",
     "Rider asked to cancel",
@@ -81,7 +78,7 @@ private fun NavigateButton(label: String, onClick: () -> Unit, modifier: Modifie
     Button(
         onClick = onClick,
         modifier = modifier,
-        colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = PuNavy)
+        colors = ButtonDefaults.buttonColors(containerColor = PuInk, contentColor = Color.White)
     ) {
         Text("➤  $label", fontSize = 15.sp, fontWeight = FontWeight.Bold)
     }
@@ -107,7 +104,7 @@ private fun TinyChip(label: String, color: Color, onClick: () -> Unit) {
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(50))
-            .background(PuNavy2)
+            .background(PuCard)
             .clickable(onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 6.dp),
         contentAlignment = Alignment.Center
@@ -144,7 +141,7 @@ fun PickupNavigationScreen(
         }
     }
 
-    Surface(modifier = Modifier.fillMaxSize(), color = PuNavy) {
+    Surface(modifier = Modifier.fillMaxSize(), color = PuBg) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -162,7 +159,7 @@ fun PickupNavigationScreen(
                 if (arrived) {
                     Pill("Waiting ${clock(waitSeconds)}", PuAmber, PuAmberInk)
                 } else {
-                    Pill("${request.etaMinutes} min away", PuNavy2, Color.White)
+                    Pill("${request.etaMinutes} min away", PuCard, PuInk)
                 }
             }
             Spacer(Modifier.height(4.dp))
@@ -172,12 +169,12 @@ fun PickupNavigationScreen(
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         RiderAvatar(request.riderName, 44.dp)
                         Spacer(Modifier.height(4.dp))
-                        Text(request.riderName, color = Color.White, fontSize = 13.sp)
+                        Text(request.riderName, color = PuInk, fontSize = 13.sp)
                         Text("★ ${request.riderRating}", color = PuMuted, fontSize = 12.sp)
                     }
                     Spacer(Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
-                        AddressRow("A", Color(0xFF3B6BFF), request.pickup, Color.White, 16.sp, true)
+                        AddressRow("A", Color(0xFF3B6BFF), request.pickup, PuInk, 16.sp, true)
                         Spacer(Modifier.height(8.dp))
                         AddressRow("B", Color(0xFF1FA463), request.dropoff, PuMuted, 14.sp)
                     }
@@ -189,9 +186,9 @@ fun PickupNavigationScreen(
                 }
                 Spacer(Modifier.height(10.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Pill(request.paymentMethod, Color(0xFF2A3A66), Color.White, 11.sp)
+                    Pill(request.paymentMethod, PuChip, PuInk, 11.sp)
                     Spacer(Modifier.width(10.dp))
-                    Text(naira(request.fare), color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Text(naira(request.fare), color = PuInk, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 }
             }
             Spacer(Modifier.height(12.dp))
@@ -251,14 +248,14 @@ fun PickupNavigationScreen(
                                 )
                             )
                             Spacer(Modifier.width(10.dp))
-                            Text(item, color = Color.White, fontSize = 15.sp)
+                            Text(item, color = PuInk, fontSize = 15.sp)
                         }
                     }
                 }
             },
-            containerColor = PuNavy2,
-            titleContentColor = Color.White,
-            textContentColor = Color.White
+            containerColor = PuCard,
+            titleContentColor = PuInk,
+            textContentColor = PuInk
         )
     }
     if (showNoMaps) {
@@ -292,7 +289,7 @@ fun TripInProgressScreen(request: RideRequest, onEndTrip: () -> Unit) {
         }
     }
 
-    Surface(modifier = Modifier.fillMaxSize(), color = PuNavy) {
+    Surface(modifier = Modifier.fillMaxSize(), color = PuBg) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -305,7 +302,7 @@ fun TripInProgressScreen(request: RideRequest, onEndTrip: () -> Unit) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text("Trip in progress", color = PuMuted, fontSize = 14.sp)
-                Pill(clock(seconds), PuNavy2, Color.White)
+                Pill(clock(seconds), PuCard, PuInk)
             }
             Spacer(Modifier.height(6.dp))
 
@@ -314,7 +311,7 @@ fun TripInProgressScreen(request: RideRequest, onEndTrip: () -> Unit) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(naira(request.fare), color = Color.White, fontSize = 36.sp, fontWeight = FontWeight.Bold)
+                    Text(naira(request.fare), color = PuInk, fontSize = 36.sp, fontWeight = FontWeight.Bold)
                     Text(
                         "${request.riderName} · ${request.paymentMethod}",
                         color = PuMuted, fontSize = 14.sp
@@ -323,7 +320,7 @@ fun TripInProgressScreen(request: RideRequest, onEndTrip: () -> Unit) {
                 // SOS and Chat: tiny, above the map, away from the map controls.
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     TinyChip("SOS", PuDanger) { showSos = true }
-                    TinyChip("Chat", Color.White) { showChat = true }
+                    TinyChip("Chat", PuInk) { showChat = true }
                 }
             }
             Spacer(Modifier.height(12.dp))
@@ -331,7 +328,7 @@ fun TripInProgressScreen(request: RideRequest, onEndTrip: () -> Unit) {
             InfoCard {
                 AddressRow("A", Color(0xFF3B6BFF), request.pickup, PuMuted, 14.sp)
                 Spacer(Modifier.height(8.dp))
-                AddressRow("B", Color(0xFF1FA463), request.dropoff, Color.White, 16.sp, true)
+                AddressRow("B", Color(0xFF1FA463), request.dropoff, PuInk, 16.sp, true)
             }
             Spacer(Modifier.height(12.dp))
 
@@ -364,8 +361,8 @@ fun TripInProgressScreen(request: RideRequest, onEndTrip: () -> Unit) {
             },
             title = { Text("End this trip?") },
             text = { Text("Only end the trip once ${request.riderName} has reached ${request.dropoff}.") },
-            containerColor = PuNavy2,
-            titleContentColor = Color.White,
+            containerColor = PuCard,
+            titleContentColor = PuInk,
             textContentColor = PuMuted
         )
     }
@@ -384,8 +381,8 @@ fun TripInProgressScreen(request: RideRequest, onEndTrip: () -> Unit) {
             },
             title = { Text("Send an SOS?") },
             text = { Text("Skeleton build: later this alerts Pick Up support and shares your live location.") },
-            containerColor = PuNavy2,
-            titleContentColor = Color.White,
+            containerColor = PuCard,
+            titleContentColor = PuInk,
             textContentColor = PuMuted
         )
     }
@@ -411,13 +408,13 @@ private fun ReceiptRow(label: String, value: String, strong: Boolean = false) {
     ) {
         Text(
             label,
-            color = if (strong) Color.White else PuMuted,
+            color = if (strong) PuInk else PuMuted,
             fontSize = if (strong) 18.sp else 14.sp,
             fontWeight = if (strong) FontWeight.Bold else FontWeight.Normal
         )
         Text(
             value,
-            color = Color.White,
+            color = PuInk,
             fontSize = if (strong) 22.sp else 14.sp,
             fontWeight = FontWeight.Bold
         )
@@ -433,31 +430,31 @@ fun TripCompleteScreen(request: RideRequest, onDone: () -> Unit) {
     // No going back into a finished trip.
     BackHandler { }
 
-    Surface(modifier = Modifier.fillMaxSize(), color = PuNavy) {
+    Surface(modifier = Modifier.fillMaxSize(), color = PuBg) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .systemBarsPadding()
                 .padding(horizontal = 20.dp, vertical = 16.dp)
         ) {
-            Text("✓ Trip complete", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+            Text("✓ Trip complete", color = PuInk, fontSize = 24.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(16.dp))
 
             InfoCard {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     StopMarker("A", Color(0xFF3B6BFF))
                     Spacer(Modifier.width(10.dp))
-                    Text(request.pickup, color = Color.White, fontSize = 15.sp)
+                    Text(request.pickup, color = PuInk, fontSize = 15.sp)
                 }
                 Spacer(Modifier.height(8.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     StopMarker("B", Color(0xFF1FA463))
                     Spacer(Modifier.width(10.dp))
-                    Text(request.dropoff, color = Color.White, fontSize = 15.sp)
+                    Text(request.dropoff, color = PuInk, fontSize = 15.sp)
                 }
                 Spacer(Modifier.height(10.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Pill(request.paymentMethod, Color(0xFF2A3A66), Color.White, 11.sp)
+                    Pill(request.paymentMethod, PuChip, PuInk, 11.sp)
                     Spacer(Modifier.width(10.dp))
                     Text("$km km · ${request.riderName}", color = PuMuted, fontSize = 13.sp)
                 }
@@ -474,7 +471,7 @@ fun TripCompleteScreen(request: RideRequest, onDone: () -> Unit) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(1.dp)
-                        .background(Color(0x33FFFFFF))
+                        .background(PuLine)
                 )
                 Spacer(Modifier.height(6.dp))
                 ReceiptRow("You receive", naira(request.fare), strong = true)
