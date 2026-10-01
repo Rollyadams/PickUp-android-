@@ -40,6 +40,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -50,16 +51,16 @@ private val stepTitles = listOf(
     "Identity",
     "Your car",
     "Car photos & papers",
-    "Guarantor",
+    "Location",
     "Review"
 )
 
 private val stepIntros = listOf(
-    "Your home address and emergency contact keep riders and you safe. They are only used for safety and verification.",
+    "We use these to confirm who you are. Enter them exactly as they appear on your documents.",
     "Clear photos, all corners visible. Your selfie must be taken now so we know it is really you.",
-    "Riders see these details before they get in, so be honest. Spot checks will confirm them.",
+    "Riders see these details before they get in.",
     "Papers can come from your gallery. Car photos must be taken now, with the number plate visible.",
-    "Your guarantor vouches for you. We will call them before approving you.",
+    "Pick Up needs your location all the time you are online.",
     "Check everything, then send it for review."
 )
 
@@ -151,12 +152,12 @@ private fun ConsentRow(text: String, checked: Boolean, onChange: (Boolean) -> Un
 
 @Composable
 fun OnboardingScreen(onSubmitted: () -> Unit) {
+    val context = LocalContext.current
     var step by rememberSaveable { mutableStateOf(0) }
 
     var name by rememberSaveable { mutableStateOf("") }
-    var address by rememberSaveable { mutableStateOf("") }
-    var ecName by rememberSaveable { mutableStateOf("") }
-    var ecPhone by rememberSaveable { mutableStateOf("") }
+    var nin by rememberSaveable { mutableStateOf("") }
+    var licence by rememberSaveable { mutableStateOf("") }
 
     var docsAdded by rememberSaveable { mutableStateOf("") }
 
@@ -164,30 +165,25 @@ fun OnboardingScreen(onSubmitted: () -> Unit) {
     var carYear by rememberSaveable { mutableStateOf("") }
     var carColour by rememberSaveable { mutableStateOf("") }
     var plate by rememberSaveable { mutableStateOf("") }
-    var ac by rememberSaveable { mutableStateOf(-1) }
 
-    var gName by rememberSaveable { mutableStateOf("") }
-    var gPhone by rememberSaveable { mutableStateOf("") }
-    var gRelation by rememberSaveable { mutableStateOf("") }
-    var consentCall by rememberSaveable { mutableStateOf(false) }
-    var consentShare by rememberSaveable { mutableStateOf(false) }
+    var agreed by rememberSaveable { mutableStateOf(false) }
+
+    val locationOk = rememberAlwaysLocationGranted()
+    val requestLocation = rememberLocationRequester()
 
     fun has(key: String): Boolean = docsAdded.split(",").contains(key)
     fun add(key: String) {
         if (!has(key)) docsAdded += "$key,"
     }
-    fun validPhone(p: String): Boolean = p.length == 11 && p.startsWith("0")
 
     val canNext = when (step) {
-        0 -> name.trim().length >= 3 && address.trim().length >= 5 &&
-            ecName.trim().length >= 2 && validPhone(ecPhone)
+        0 -> name.trim().length >= 3 && nin.length == 11 && licence.length >= 8
         1 -> has("nin") && has("licence") && has("selfie")
         2 -> carModel.trim().length >= 2 && carYear.length == 4 &&
-            carColour.trim().length >= 3 && plate.trim().length >= 5 && ac >= 0
+            carColour.trim().length >= 3 && plate.trim().length >= 5
         3 -> listOf("reg", "ins", "road", "front", "back", "inside").all { has(it) }
-        4 -> gName.trim().length >= 2 && validPhone(gPhone) &&
-            gRelation.trim().length >= 3 && consentCall && consentShare
-        else -> true
+        4 -> locationOk
+        else -> agreed
     }
 
     val scroll = rememberScrollState()
@@ -243,11 +239,14 @@ fun OnboardingScreen(onSubmitted: () -> Unit) {
                 when (step) {
                     0 -> {
                         FormField("Full name (as on your ID)", name, { name = it })
-                        FormField("Home address", address, { address = it }, maxLength = 120)
-                        FormField("Emergency contact name", ecName, { ecName = it })
                         FormField(
-                            "Emergency contact phone", ecPhone, { ecPhone = it },
-                            keyboard = KeyboardType.Phone, maxLength = 11, digitsOnly = true
+                            "National ID number (NIN)", nin, { nin = it },
+                            keyboard = KeyboardType.Number, maxLength = 11, digitsOnly = true
+                        )
+                        FormField(
+                            "Driver's licence number", licence,
+                            { licence = it.uppercase().filter { c -> c.isLetterOrDigit() } },
+                            maxLength = 20
                         )
                     }
                     1 -> {
@@ -263,10 +262,6 @@ fun OnboardingScreen(onSubmitted: () -> Unit) {
                         )
                         FormField("Colour", carColour, { carColour = it }, maxLength = 20)
                         FormField("Number plate", plate, { plate = it.uppercase() }, maxLength = 12)
-                        Text("Does the air conditioner work?", color = PuMuted, fontSize = 13.sp)
-                        Spacer(Modifier.height(6.dp))
-                        SegmentedToggle(listOf("Yes", "No"), ac) { ac = it }
-                        Spacer(Modifier.height(8.dp))
                     }
                     3 -> {
                         DocCard("Vehicle registration", "Vehicle licence or registration papers", has("reg"), false) { add("reg") }
@@ -277,29 +272,53 @@ fun OnboardingScreen(onSubmitted: () -> Unit) {
                         DocCard("Inside the car", "Seats and dashboard, clean and tidy", has("inside"), true) { add("inside") }
                     }
                     4 -> {
-                        FormField("Guarantor's full name", gName, { gName = it })
-                        FormField(
-                            "Guarantor's phone", gPhone, { gPhone = it },
-                            keyboard = KeyboardType.Phone, maxLength = 11, digitsOnly = true
-                        )
-                        FormField("Relationship to you", gRelation, { gRelation = it }, maxLength = 30)
-                        ConsentRow("My guarantor agrees to be called by Pick Up.", consentCall) { consentCall = it }
-                        ConsentRow(
-                            "Pick Up may share my verified details with the police when legally requested.",
-                            consentShare
-                        ) { consentShare = it }
+                        InfoCard {
+                            Text("Allow location all the time", color = PuInk, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                            Spacer(Modifier.height(6.dp))
+                            Text(
+                                "Pick Up uses your phone's location while you are online, even when the app is closed " +
+                                    "or the screen is off. Riders can find you, help can reach you fast, and every trip " +
+                                    "is recorded for safety.",
+                                color = PuMuted, fontSize = 13.sp
+                            )
+                            Spacer(Modifier.height(12.dp))
+                            if (locationOk) {
+                                Pill("On all the time ✓", PuGood, Color.White)
+                            } else {
+                                Pill("Not allowed yet", PuChip, PuMuted)
+                            }
+                        }
+                        Spacer(Modifier.height(12.dp))
+                        if (!locationOk) {
+                            OutlineButton("Allow all the time", { requestLocation() })
+                            TextButton(onClick = { openAppSettings(context) }) {
+                                Text("Open phone settings", color = PuMuted)
+                            }
+                            Text(
+                                "On the next screen, choose \"Allow all the time\".",
+                                color = PuMuted, fontSize = 12.sp
+                            )
+                        }
                     }
                     else -> {
                         val docCount = docsAdded.split(",").count { it.isNotEmpty() }
                         InfoCard {
                             MoneyRow("Name", name)
+                            MoneyRow("National ID", "•••••••" + nin.takeLast(4))
+                            MoneyRow("Licence", "•••••" + licence.takeLast(4))
                             MoneyRow("Car", "$carModel · $plate")
                             MoneyRow("Documents and photos", "$docCount of 9")
-                            MoneyRow("Guarantor", gName)
+                            MoneyRow("Location", "On all the time")
                         }
                         Spacer(Modifier.height(12.dp))
+                        ConsentRow("I agree to the Terms and Privacy Policy.", agreed) { agreed = it }
                         Text(
-                            "We check your documents and call your guarantor. You cannot go online until you are approved.",
+                            "Trip records are kept for safety and may be shared with the authorities when the law requires it.",
+                            color = PuMuted, fontSize = 12.sp
+                        )
+                        Spacer(Modifier.height(10.dp))
+                        Text(
+                            "We check your documents. You cannot go online until you are approved.",
                             color = PuMuted, fontSize = 13.sp
                         )
                     }
@@ -389,7 +408,6 @@ fun VerificationPendingScreen(onDemoContinue: () -> Unit) {
                 StatusRow("Documents received", "Thank you, everything arrived.", 0)
                 StatusRow("Identity and licence check", "In progress", 1)
                 StatusRow("Car and photos check", "Waiting", 2)
-                StatusRow("Guarantor call", "Waiting", 2)
             }
             Spacer(Modifier.height(12.dp))
             Text(
@@ -481,12 +499,6 @@ fun ProfileScreen(onBack: () -> Unit) {
             }
             Spacer(Modifier.height(12.dp))
 
-            InfoCard {
-                Text("Guarantor", color = PuInk, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                Spacer(Modifier.height(4.dp))
-                MoneyRow("Name", "Sample Guarantor")
-                MoneyRow("Phone", "0801 234 5678")
-            }
             Spacer(Modifier.height(16.dp))
             OutlineButton("Update a document", { showUpdate = true })
             Spacer(Modifier.height(8.dp))
