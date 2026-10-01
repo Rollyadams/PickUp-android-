@@ -7,6 +7,9 @@ import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,6 +28,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -42,9 +46,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
+import kotlin.math.roundToInt
 
 /** One-tap hand-off to Waze or Google Maps (the driver's choice in Settings), or any maps app. */
 private fun openNavigation(context: Context, destination: String): Boolean {
@@ -68,6 +74,9 @@ private fun openNavigation(context: Context, destination: String): Boolean {
 
 private fun clock(totalSeconds: Int): String =
     "%02d:%02d".format(totalSeconds / 60, totalSeconds % 60)
+
+// PLACEHOLDER: how long a driver waits before they can report a no-show.
+private const val NO_SHOW_SECONDS = 120
 
 private val cancelReasons = listOf(
     "Rider not at pickup",
@@ -132,6 +141,10 @@ fun PickupNavigationScreen(
     var showNoMaps by remember { mutableStateOf(false) }
     var showCall by remember { mutableStateOf(false) }
     var showChat by remember { mutableStateOf(false) }
+    var showCode by remember { mutableStateOf(false) }
+    var code by remember { mutableStateOf("") }
+    var codeError by remember { mutableStateOf<String?>(null) }
+    var tries by remember { mutableIntStateOf(0) }
 
     // The phone's back button does nothing here. Cancelling is only via "Cancel ride".
     BackHandler { }
@@ -210,7 +223,11 @@ fun PickupNavigationScreen(
             Spacer(Modifier.height(12.dp))
 
             if (arrived) {
-                PrimaryButton("Start trip", onStartTrip)
+                if (waitSeconds >= NO_SHOW_SECONDS) {
+                    OutlineButton("Rider didn't show up", { onCancel() }, color = PuDanger)
+                    Spacer(Modifier.height(10.dp))
+                }
+                PrimaryButton("Start trip", { code = ""; codeError = null; showCode = true })
             } else {
                 PrimaryButton("I've arrived", { arrived = true })
             }
@@ -266,6 +283,69 @@ fun PickupNavigationScreen(
     if (showNoMaps) {
         SkeletonDialog(message = "No maps app found on this phone.", onOk = { showNoMaps = false })
     }
+    if (showCode) {
+        val canStart = code.length == 4 && tries < 3
+        AlertDialog(
+            onDismissRequest = { showCode = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        if (code == request.startCode) {
+                            showCode = false
+                            onStartTrip()
+                        } else {
+                            tries++
+                            codeError = if (tries >= 3) {
+                                "Too many wrong tries. Contact support."
+                            } else {
+                                "That code is wrong. Ask ${request.riderName} to read it again."
+                            }
+                        }
+                    },
+                    enabled = canStart
+                ) {
+                    Text("Start trip", color = if (canStart) PuAmber else PuMuted, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCode = false }) {
+                    Text("Cancel", color = PuMuted)
+                }
+            },
+            title = { Text("Enter the rider's code") },
+            text = {
+                Column {
+                    Text(
+                        "Ask ${request.riderName} to read the 4-digit code from their app. This proves the rider is in your car.",
+                        color = PuMuted, fontSize = 13.sp
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = code,
+                        onValueChange = { input ->
+                            if (input.length <= 4 && input.all { it.isDigit() }) {
+                                code = input
+                                codeError = null
+                            }
+                        },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        colors = fieldColors(),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    codeError?.let { message ->
+                        Spacer(Modifier.height(6.dp))
+                        Text(message, color = PuDanger, fontSize = 12.sp)
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Text("Demo only: the code is ${request.startCode}", color = PuMuted, fontSize = 11.sp)
+                }
+            },
+            containerColor = PuCard,
+            titleContentColor = PuInk,
+            textContentColor = PuMuted
+        )
+    }
     if (showCall) {
         SkeletonDialog(message = "Calling ${request.riderName} comes in a later batch.", onOk = { showCall = false })
     }
@@ -274,15 +354,39 @@ fun PickupNavigationScreen(
     }
 }
 
+private data class DestinationOption(val name: String, val factor: Double)
+
+// PLACEHOLDER options until real address search exists.
+private val destinationOptions = listOf(
+    DestinationOption("Maryland Mall", 0.6),
+    DestinationOption("Ikeja City Mall", 1.4),
+    DestinationOption("Lekki Phase 1", 1.9)
+)
+
 @Composable
 fun TripInProgressScreen(request: RideRequest, onEndTrip: () -> Unit) {
     val context = LocalContext.current
+    var current by remember { mutableStateOf(request) }
     var seconds by remember { mutableIntStateOf(0) }
     var showSos by remember { mutableStateOf(false) }
     var sosSent by remember { mutableStateOf(false) }
     var showChat by remember { mutableStateOf(false) }
     var showEnd by remember { mutableStateOf(false) }
     var showNoMaps by remember { mutableStateOf(false) }
+    var showChange by remember { mutableStateOf(false) }
+    var selected by remember { mutableIntStateOf(-1) }
+    var proposal by remember { mutableStateOf<RideRequest?>(null) }
+
+    // A new drop-off keeps the same rate per km, so the fare follows the distance.
+    fun proposalFor(option: DestinationOption): RideRequest {
+        val km = ((current.distanceKm * option.factor) * 10).roundToInt() / 10.0
+        val rate = current.fare / current.distanceKm
+        return current.copy(
+            dropoff = option.name,
+            distanceKm = km,
+            fare = roundTo100((rate * km).toInt())
+        )
+    }
 
     // Trip is live: block the system back button so it can't be left by accident.
     BackHandler { }
@@ -316,31 +420,32 @@ fun TripInProgressScreen(request: RideRequest, onEndTrip: () -> Unit) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(naira(request.fare), color = PuInk, fontSize = 36.sp, fontWeight = FontWeight.Bold)
+                    Text(naira(current.fare), color = PuInk, fontSize = 36.sp, fontWeight = FontWeight.Bold)
                     Text(
-                        "${request.riderName} · ${request.paymentMethod}",
+                        "${current.riderName} · ${current.paymentMethod}",
                         color = PuMuted, fontSize = 14.sp
                     )
                 }
-                // SOS and Chat: tiny, above the map, away from the map controls.
+                // SOS, Chat and Change: tiny, above the map, away from the map controls.
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     TinyChip("SOS", PuDanger) { showSos = true }
                     TinyChip("Chat", PuInk) { showChat = true }
+                    TinyChip("Change", PuInk) { selected = -1; showChange = true }
                 }
             }
             Spacer(Modifier.height(12.dp))
 
             InfoCard {
-                AddressRow("A", Color(0xFF3B6BFF), request.pickup, PuMuted, 14.sp)
+                AddressRow("A", Color(0xFF3B6BFF), current.pickup, PuMuted, 14.sp)
                 Spacer(Modifier.height(8.dp))
-                AddressRow("B", Color(0xFF1FA463), request.dropoff, PuInk, 16.sp, true)
+                AddressRow("B", Color(0xFF1FA463), current.dropoff, PuInk, 16.sp, true)
             }
             Spacer(Modifier.height(12.dp))
 
             MapPlaceholder(Modifier.weight(1f)) {
                 NavigateButton(
                     label = "Navigate to drop-off",
-                    onClick = { if (!openNavigation(context, request.dropoff)) showNoMaps = true },
+                    onClick = { if (!openNavigation(context, current.dropoff)) showNoMaps = true },
                     modifier = Modifier
                         .align(Alignment.BottomStart)
                         .padding(12.dp)
@@ -351,6 +456,96 @@ fun TripInProgressScreen(request: RideRequest, onEndTrip: () -> Unit) {
         }
     }
 
+    if (showChange) {
+        AlertDialog(
+            onDismissRequest = { showChange = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        proposal = proposalFor(destinationOptions[selected])
+                        showChange = false
+                    },
+                    enabled = selected >= 0
+                ) {
+                    Text("Send to rider", color = if (selected >= 0) PuAmber else PuMuted)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showChange = false }) {
+                    Text("Cancel", color = PuMuted)
+                }
+            },
+            title = { Text("Rider wants a different drop-off?") },
+            text = {
+                Column {
+                    Text(
+                        "The fare is recalculated at the same rate per km, and both of you must accept. Skeleton build: real address search comes later.",
+                        color = PuMuted, fontSize = 12.sp
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    destinationOptions.forEachIndexed { index, option ->
+                        val offer = proposalFor(option)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { selected = index }
+                                .padding(vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = selected == index,
+                                onClick = null,
+                                colors = RadioButtonDefaults.colors(
+                                    selectedColor = PuAmber,
+                                    unselectedColor = PuMuted
+                                )
+                            )
+                            Spacer(Modifier.width(10.dp))
+                            Column {
+                                Text(option.name, color = PuInk, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                                Text(
+                                    "${"%.1f".format(offer.distanceKm)} km · ${naira(offer.fare)}",
+                                    color = PuMuted, fontSize = 13.sp
+                                )
+                            }
+                        }
+                    }
+                }
+            },
+            containerColor = PuCard,
+            titleContentColor = PuInk,
+            textContentColor = PuInk
+        )
+    }
+    proposal?.let { offer ->
+        AlertDialog(
+            onDismissRequest = { },
+            confirmButton = {
+                TextButton(onClick = {
+                    current = offer
+                    DriverRepository.updateTrip(offer)
+                    proposal = null
+                }) {
+                    Text("Rider accepts", color = PuAmber, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { proposal = null }) {
+                    Text("Rider declines", color = PuMuted)
+                }
+            },
+            title = { Text("Waiting for ${current.riderName}") },
+            text = {
+                Text(
+                    "New drop-off: ${offer.dropoff}\nNew fare: ${naira(offer.fare)} for ${"%.1f".format(offer.distanceKm)} km\n\n" +
+                        "Skeleton build: tap a button to pretend the rider answered. If the rider declines, the trip continues to the original drop-off."
+                )
+            },
+            containerColor = PuCard,
+            titleContentColor = PuInk,
+            textContentColor = PuMuted
+        )
+    }
     if (showEnd) {
         AlertDialog(
             onDismissRequest = { showEnd = false },
@@ -365,7 +560,7 @@ fun TripInProgressScreen(request: RideRequest, onEndTrip: () -> Unit) {
                 }
             },
             title = { Text("End this trip?") },
-            text = { Text("Only end the trip once ${request.riderName} has reached ${request.dropoff}.") },
+            text = { Text("Only end the trip once ${current.riderName} has reached ${current.dropoff}.") },
             containerColor = PuCard,
             titleContentColor = PuInk,
             textContentColor = PuMuted
@@ -395,7 +590,7 @@ fun TripInProgressScreen(request: RideRequest, onEndTrip: () -> Unit) {
         SkeletonDialog(message = "SOS alert would be sent now.", onOk = { sosSent = false })
     }
     if (showChat) {
-        SkeletonDialog(message = "Chat with ${request.riderName} comes in a later batch.", onOk = { showChat = false })
+        SkeletonDialog(message = "Chat with ${current.riderName} comes in a later batch.", onOk = { showChat = false })
     }
     if (showNoMaps) {
         SkeletonDialog(message = "No maps app found on this phone.", onOk = { showNoMaps = false })
@@ -426,11 +621,15 @@ private fun ReceiptRow(label: String, value: String, strong: Boolean = false) {
     }
 }
 
+private val riderFlags = listOf("Rude", "Late", "Messy", "Would not pay")
+
 @Composable
 fun TripCompleteScreen(request: RideRequest, onDone: () -> Unit) {
     val km = "%.1f".format(request.distanceKm)
     val isCash = request.paymentMethod == "Cash"
     val vat = vatOn(request.fare)
+    var stars by remember { mutableIntStateOf(0) }
+    var flags by remember { mutableStateOf("") }
 
     // No going back into a finished trip.
     BackHandler { }
@@ -442,49 +641,106 @@ fun TripCompleteScreen(request: RideRequest, onDone: () -> Unit) {
                 .systemBarsPadding()
                 .padding(horizontal = 20.dp, vertical = 16.dp)
         ) {
-            Text("✓ Trip complete", color = PuInk, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(16.dp))
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                Text("✓ Trip complete", color = PuInk, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(16.dp))
 
-            InfoCard {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    StopMarker("A", Color(0xFF3B6BFF))
-                    Spacer(Modifier.width(10.dp))
-                    Text(request.pickup, color = PuInk, fontSize = 15.sp)
+                InfoCard {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        StopMarker("A", Color(0xFF3B6BFF))
+                        Spacer(Modifier.width(10.dp))
+                        Text(request.pickup, color = PuInk, fontSize = 15.sp)
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        StopMarker("B", Color(0xFF1FA463))
+                        Spacer(Modifier.width(10.dp))
+                        Text(request.dropoff, color = PuInk, fontSize = 15.sp)
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Pill(request.paymentMethod, PuChip, PuInk, 11.sp)
+                        Spacer(Modifier.width(10.dp))
+                        Text("$km km · ${request.riderName}", color = PuMuted, fontSize = 13.sp)
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+
+                InfoCard {
+                    ReceiptRow("Fare", naira(request.fare))
+                    ReceiptRow("Commission", naira(0))
+                    ReceiptRow("VAT (7.5%)", "−" + naira(vat))
+                    ReceiptRow("Daily fee", "Billed once a day")
+                    Spacer(Modifier.height(6.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(1.dp)
+                            .background(PuLine)
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    ReceiptRow("You receive", naira(request.fare), strong = true)
                 }
                 Spacer(Modifier.height(8.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    StopMarker("B", Color(0xFF1FA463))
-                    Spacer(Modifier.width(10.dp))
-                    Text(request.dropoff, color = PuInk, fontSize = 15.sp)
-                }
-                Spacer(Modifier.height(10.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Pill(request.paymentMethod, PuChip, PuInk, 11.sp)
-                    Spacer(Modifier.width(10.dp))
-                    Text("$km km · ${request.riderName}", color = PuMuted, fontSize = 13.sp)
-                }
-            }
-            Spacer(Modifier.height(12.dp))
+                Text("VAT is taken from your wallet, not from your fare.", color = PuMuted, fontSize = 12.sp)
+                Spacer(Modifier.height(16.dp))
 
-            InfoCard {
-                ReceiptRow("Fare", naira(request.fare))
-                ReceiptRow("Commission", naira(0))
-                ReceiptRow("VAT (7.5%)", "−" + naira(vat))
-                ReceiptRow("Daily fee", "Billed once a day")
-                Spacer(Modifier.height(6.dp))
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(1.dp)
-                        .background(PuLine)
-                )
-                Spacer(Modifier.height(6.dp))
-                ReceiptRow("You receive", naira(request.fare), strong = true)
+                // Optional and quick: one tap on the stars is enough.
+                InfoCard {
+                    Text("Rate ${request.riderName}", color = PuInk, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(6.dp))
+                    Row {
+                        for (i in 1..5) {
+                            Text(
+                                if (i <= stars) "★" else "☆",
+                                color = PuAmber,
+                                fontSize = 34.sp,
+                                modifier = Modifier
+                                    .clickable { stars = i }
+                                    .padding(end = 8.dp)
+                            )
+                        }
+                    }
+                    if (stars in 1..3) {
+                        Spacer(Modifier.height(8.dp))
+                        Text("What went wrong? (optional)", color = PuMuted, fontSize = 12.sp)
+                        Spacer(Modifier.height(6.dp))
+                        riderFlags.chunked(2).forEach { rowFlags ->
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                rowFlags.forEach { flag ->
+                                    val on = flags.split(",").contains(flag)
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(50))
+                                            .background(if (on) PuAmber else PuChip)
+                                            .clickable {
+                                                flags = if (on) {
+                                                    flags.split(",").filter { it.isNotEmpty() && it != flag }.joinToString(",")
+                                                } else {
+                                                    "$flags$flag,"
+                                                }
+                                            }
+                                            .padding(horizontal = 14.dp, vertical = 8.dp)
+                                    ) {
+                                        Text(
+                                            flag,
+                                            color = if (on) PuAmberInk else PuInk,
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+                            }
+                            Spacer(Modifier.height(8.dp))
+                        }
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
             }
-            Spacer(Modifier.height(8.dp))
-            Text("VAT is taken from your wallet, not from your fare.", color = PuMuted, fontSize = 12.sp)
-
-            Spacer(Modifier.weight(1f))
 
             Text(
                 if (isCash) "Collect ${naira(request.fare)} cash from ${request.riderName}."
