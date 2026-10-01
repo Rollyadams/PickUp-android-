@@ -84,7 +84,7 @@ private fun ratingTrend(stats: PerformanceStats): Pair<String, Boolean> {
 }
 
 @Composable
-fun PerformanceScreen(onMenu: () -> Unit) {
+fun PerformanceScreen(onMenu: () -> Unit, onReviews: () -> Unit) {
     var window by remember { mutableIntStateOf(0) }
     val stats = DriverRepository.performance(window)
     val (trendText, trendUp) = ratingTrend(stats)
@@ -115,6 +115,8 @@ fun PerformanceScreen(onMenu: () -> Unit) {
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold
                 )
+                Spacer(Modifier.height(12.dp))
+                OutlineButton("See reviews", onReviews)
             }
             Spacer(Modifier.height(12.dp))
 
