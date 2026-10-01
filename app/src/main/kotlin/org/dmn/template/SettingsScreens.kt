@@ -440,7 +440,6 @@ private fun stars(count: Int): String = "★".repeat(count) + "☆".repeat(5 - c
 @Composable
 fun RatingsScreen(onBack: () -> Unit) {
     val rating = DriverRepository.performance(1).rating
-    var showTips by remember { mutableStateOf(false) }
 
     // PLACEHOLDER numbers until real rider reports exist.
     val acRate = 92
@@ -468,10 +467,7 @@ fun RatingsScreen(onBack: () -> Unit) {
         }
         Spacer(Modifier.height(12.dp))
 
-        InfoCard {
-            SettingRow("Tips for success") { showTips = true }
-        }
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(4.dp))
 
         reviewDays.forEach { day ->
             Text(day.date, color = PuMuted, fontSize = 13.sp, fontWeight = FontWeight.Bold)
@@ -507,10 +503,4 @@ fun RatingsScreen(onBack: () -> Unit) {
         }
     }
 
-    if (showTips) {
-        SkeletonDialog(
-            message = "Keep the car clean and the AC working. Be polite and calm. Do not cancel after accepting. Arrive at the pickup point on time.",
-            onOk = { showTips = false }
-        )
-    }
 }
