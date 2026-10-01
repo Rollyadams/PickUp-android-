@@ -10,7 +10,8 @@ data class RideRequest(
     val etaMinutes: Int,
     val pickup: String,
     val dropoff: String,
-    val paymentMethod: String
+    val paymentMethod: String,
+    val startCode: String
 )
 
 data class IncomeSummary(
@@ -34,6 +35,16 @@ data class WalletEntry(val title: String, val note: String, val amount: Int)
 
 data class PayoutAccount(val bank: String, val number: String, val name: String)
 
+data class TripRecord(
+    val day: String,
+    val pickup: String,
+    val dropoff: String,
+    val fare: Int,
+    val payment: String,
+    val status: String,
+    val km: Double
+)
+
 data class NotificationItem(val title: String, val body: String, val time: String, val unread: Boolean)
 
 // PLACEHOLDER DATA. Later, real ride requests replace this object
@@ -41,20 +52,31 @@ data class NotificationItem(val title: String, val body: String, val time: Strin
 object DriverRepository {
     private val sample = listOf(
         RideRequest("r1", "Tunde", 4.79, 96, 5200, 9.4, 2,
-            "Allen Avenue, Ikeja", "Yaba Tech Gate", "Bank Transfer"),
+            "Allen Avenue, Ikeja", "Yaba Tech Gate", "Bank Transfer", "4821"),
         RideRequest("r2", "Amaka", 4.80, 59, 6900, 21.5, 8,
-            "Lekki Phase 1 Gate", "Ajah Roundabout", "Cash"),
+            "Lekki Phase 1 Gate", "Ajah Roundabout", "Cash", "7305"),
         RideRequest("r3", "Bisi", 4.45, 67, 2500, 8.1, 4,
-            "Bode Thomas Street, Surulere", "Ojuelegba Bus Stop", "Cash"),
+            "Bode Thomas Street, Surulere", "Ojuelegba Bus Stop", "Cash", "1949"),
         RideRequest("r4", "Chidi", 4.90, 210, 12500, 31.0, 6,
-            "Ikorodu Garage", "Ojota Bus Stop", "Bank Transfer"),
+            "Ikorodu Garage", "Ojota Bus Stop", "Bank Transfer", "6628"),
         RideRequest("r5", "Dayo", 4.85, 33, 3000, 4.5, 3,
-            "Yaba Tech Gate", "Surulere Shoprite", "Cash")
+            "Yaba Tech Gate", "Surulere Shoprite", "Cash", "3057")
     )
 
     fun requests(): List<RideRequest> = sample
 
-    fun request(id: String): RideRequest? = sample.firstOrNull { it.id == id }
+    // A trip whose drop-off or fare changed mid-trip. Real data will live on the server.
+    private val tripOverrides = mutableMapOf<String, RideRequest>()
+
+    fun request(id: String): RideRequest? = tripOverrides[id] ?: sample.firstOrNull { it.id == id }
+
+    fun updateTrip(updated: RideRequest) {
+        tripOverrides[updated.id] = updated
+    }
+
+    fun clearTrip(id: String) {
+        tripOverrides.remove(id)
+    }
 
     // ----- Income (0 = day, 1 = week, 2 = month) -----
     private val incomes = listOf(
@@ -100,4 +122,15 @@ object DriverRepository {
     fun notifications(): List<NotificationItem> = notifications
 
     fun unreadCount(): Int = notifications.count { it.unread }
+
+    // ----- Trip history -----
+    private val trips = listOf(
+        TripRecord("Today", "Allen Avenue, Ikeja", "Yaba Tech Gate", 5200, "Bank Transfer", "Completed", 9.4),
+        TripRecord("Today", "Lekki Phase 1 Gate", "Ajah Roundabout", 6900, "Cash", "Completed", 21.5),
+        TripRecord("Today", "Bode Thomas Street, Surulere", "Ojuelegba Bus Stop", 0, "Cash", "Cancelled", 0.0),
+        TripRecord("Yesterday", "Ikorodu Garage", "Ojota Bus Stop", 12500, "Bank Transfer", "Completed", 31.0),
+        TripRecord("Yesterday", "Yaba Tech Gate", "Surulere Shoprite", 3000, "Cash", "Completed", 4.5)
+    )
+
+    fun trips(): List<TripRecord> = trips
 }
