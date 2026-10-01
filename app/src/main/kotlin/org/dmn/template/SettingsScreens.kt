@@ -504,3 +504,53 @@ fun RatingsScreen(onBack: () -> Unit) {
     }
 
 }
+
+
+// ----------------------------------------------------------------- History
+
+@Composable
+fun HistoryScreen(onBack: () -> Unit) {
+    val trips = remember { DriverRepository.trips() }
+    var open by remember { mutableStateOf(-1) }
+
+    SubScreen("Trip history", onBack) {
+        var lastDay = ""
+        trips.forEachIndexed { index, trip ->
+            if (trip.day != lastDay) {
+                lastDay = trip.day
+                Spacer(Modifier.height(8.dp))
+                Text(trip.day, color = PuMuted, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(6.dp))
+            }
+            val expanded = open == index
+            InfoCard {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { open = if (expanded) -1 else index }
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(trip.pickup, color = PuInk, fontSize = 14.sp)
+                            Text("→ ${trip.dropoff}", color = PuInk, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        if (trip.status == "Completed") {
+                            Text(naira(trip.fare), color = PuInk, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                        } else {
+                            Pill(trip.status, PuDanger, Color.White, 11.sp)
+                        }
+                    }
+                    if (expanded && trip.status == "Completed") {
+                        Spacer(Modifier.height(8.dp))
+                        MoneyRow("Distance", "${"%.1f".format(trip.km)} km")
+                        MoneyRow("Paid by", trip.payment)
+                        MoneyRow("VAT (7.5%)", "−" + naira(vatOn(trip.fare)))
+                        MoneyRow("You received", naira(trip.fare), strong = true)
+                    }
+                }
+            }
+            Spacer(Modifier.height(10.dp))
+        }
+    }
+}
