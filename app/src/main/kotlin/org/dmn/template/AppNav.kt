@@ -55,6 +55,18 @@ fun PickUpNav() {
     var soundsOn by remember { mutableStateOf(prefs.getBoolean("sounds_on", true)) }
     var keepScreenOn by remember { mutableStateOf(prefs.getBoolean("keep_screen_on", false)) }
 
+    // Where the driver got to: 0 = logged out, 1 = signing up, 2 = waiting for approval, 3 = approved.
+    // Launching the app resumes from there, so nobody logs in again unless they logged out.
+    fun saveStage(stage: Int) = prefs.edit().putInt("stage", stage).apply()
+    val startDestination = remember {
+        when (prefs.getInt("stage", 0)) {
+            3 -> "home"
+            2 -> "pending"
+            1 -> "onboarding"
+            else -> "phone"
+        }
+    }
+
     val systemDark = isSystemInDarkTheme()
     val dark = when (themeMode) {
         1 -> false
@@ -107,6 +119,7 @@ fun PickUpNav() {
             val logout: () -> Unit = {
                 scope.launch { drawerState.close() }
                 online = false
+                saveStage(0)
                 navController.navigate("phone") {
                     popUpTo("home") { inclusive = true }
                 }
@@ -129,7 +142,7 @@ fun PickUpNav() {
                 Column(modifier = Modifier.fillMaxSize().background(pu.bg)) {
                     NavHost(
                         navController = navController,
-                        startDestination = "phone",
+                        startDestination = startDestination,
                         modifier = Modifier.weight(1f)
                     ) {
                         composable("phone") {
@@ -138,6 +151,7 @@ fun PickUpNav() {
                         composable("code") {
                             CodeEntryScreen(
                                 onVerified = {
+                                    saveStage(1)
                                     navController.navigate("onboarding") {
                                         popUpTo("phone") { inclusive = true }
                                     }
@@ -148,6 +162,7 @@ fun PickUpNav() {
                         composable("onboarding") {
                             OnboardingScreen(
                                 onSubmitted = {
+                                    saveStage(2)
                                     navController.navigate("pending") {
                                         popUpTo("onboarding") { inclusive = true }
                                     }
@@ -157,6 +172,7 @@ fun PickUpNav() {
                         composable("pending") {
                             VerificationPendingScreen(
                                 onDemoContinue = {
+                                    saveStage(3)
                                     navController.navigate("home") {
                                         popUpTo("pending") { inclusive = true }
                                     }
