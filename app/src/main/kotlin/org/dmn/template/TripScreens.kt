@@ -46,10 +46,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 
-/** One-tap hand-off to Google Maps (or any app that handles navigation intents). */
+/** One-tap hand-off to Waze or Google Maps (the driver's choice in Settings), or any maps app. */
 private fun openNavigation(context: Context, destination: String): Boolean {
     val encoded = Uri.encode(destination)
-    val attempts = listOf("google.navigation:q=$encoded", "geo:0,0?q=$encoded")
+    val useWaze = context.getSharedPreferences("pickup_prefs", Context.MODE_PRIVATE)
+        .getInt("nav_app", 0) == 1
+    val google = "google.navigation:q=$encoded"
+    val waze = "waze://?q=$encoded&navigate=yes"
+    val geo = "geo:0,0?q=$encoded"
+    val attempts = if (useWaze) listOf(waze, google, geo) else listOf(google, geo)
     for (uriString in attempts) {
         try {
             context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(uriString)))
