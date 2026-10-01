@@ -45,10 +45,16 @@ fun PickUpNav() {
     val navController = rememberNavController()
     var online by rememberSaveable { mutableStateOf(false) }
 
-    // Appearance: 0 = Auto (follow the phone), 1 = Light, 2 = Dark. Remembered between launches.
+    // Settings, remembered between launches.
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("pickup_prefs", Context.MODE_PRIVATE) }
+    // Appearance: 0 = Auto (follow the phone), 1 = Light, 2 = Dark.
     var themeMode by remember { mutableIntStateOf(prefs.getInt("theme_mode", 0)) }
+    // Navigation app: 0 = Google Maps, 1 = Waze.
+    var navApp by remember { mutableIntStateOf(prefs.getInt("nav_app", 0)) }
+    var soundsOn by remember { mutableStateOf(prefs.getBoolean("sounds_on", true)) }
+    var keepScreenOn by remember { mutableStateOf(prefs.getBoolean("keep_screen_on", false)) }
+
     val systemDark = isSystemInDarkTheme()
     val dark = when (themeMode) {
         1 -> false
@@ -57,7 +63,7 @@ fun PickUpNav() {
     }
     val pu = if (dark) DarkPu else LightPu
 
-    // Status bar and navigation bar icons must contrast with the app background.
+    // Status bar icons contrast with the background; the screen stays on if the driver chose that.
     val view = LocalView.current
     SideEffect {
         val window = (view.context as? Activity)?.window
@@ -66,11 +72,11 @@ fun PickUpNav() {
             controller.isAppearanceLightStatusBars = !dark
             controller.isAppearanceLightNavigationBars = !dark
         }
+        view.keepScreenOn = keepScreenOn
     }
 
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
-    var menuMessage by remember { mutableStateOf<String?>(null) }
 
     CompositionLocalProvider(LocalPu provides pu) {
         MaterialTheme(
@@ -98,32 +104,25 @@ fun PickUpNav() {
             val currentRoute = backStack?.destination?.route
             val onTab = currentRoute != null && currentRoute in tabRoutes
             val openMenu: () -> Unit = { scope.launch { drawerState.open() } }
+            val logout: () -> Unit = {
+                scope.launch { drawerState.close() }
+                online = false
+                navController.navigate("phone") {
+                    popUpTo("home") { inclusive = true }
+                }
+            }
 
             ModalNavigationDrawer(
                 drawerState = drawerState,
                 gesturesEnabled = onTab,
                 drawerContent = {
                     DriverDrawer(
-                        themeMode = themeMode,
-                        onThemeMode = { mode ->
-                            themeMode = mode
-                            prefs.edit().putInt("theme_mode", mode).apply()
-                        },
-                        onItem = { label ->
+                        unread = DriverRepository.unreadCount(),
+                        onNavigate = { route ->
                             scope.launch { drawerState.close() }
-                            if (label == "Profile & documents") {
-                                navController.navigate("profile") { launchSingleTop = true }
-                            } else {
-                                menuMessage = "$label comes in a later batch."
-                            }
+                            navController.navigate(route) { launchSingleTop = true }
                         },
-                        onLogout = {
-                            scope.launch { drawerState.close() }
-                            online = false
-                            navController.navigate("phone") {
-                                popUpTo("home") { inclusive = true }
-                            }
-                        }
+                        onLogout = logout
                     )
                 }
             ) {
@@ -164,9 +163,6 @@ fun PickUpNav() {
                                 }
                             )
                         }
-                        composable("profile") {
-                            ProfileScreen(onBack = { navController.popBackStack() })
-                        }
                         composable("home") {
                             DriverHomeScreen(
                                 online = online,
@@ -177,7 +173,58 @@ fun PickUpNav() {
                         }
                         composable("income") { IncomeScreen(onMenu = openMenu) }
                         composable("wallet") { WalletScreen(onMenu = openMenu) }
-                        composable("performance") { PerformanceScreen(onMenu = openMenu) }
+                        composable("performance") {
+                            PerformanceScreen(
+                                onMenu = openMenu,
+                                onReviews = { navController.navigate("ratings") }
+                            )
+                        }
+
+                        // ----- Menu screens -----
+                        composable("profile") {
+                            ProfileScreen(onBack = { navController.popBackStack() })
+                        }
+                        composable("notifications") {
+                            NotificationsScreen(onBack = { navController.popBackStack() })
+                        }
+                        composable("safety") {
+                            SafetyScreen(
+                                onBack = { navController.popBackStack() },
+                                onSupport = { navController.navigate("support") { launchSingleTop = true } }
+                            )
+                        }
+                        composable("settings") {
+                            SettingsScreen(
+                                themeMode = themeMode,
+                                onThemeMode = { mode ->
+                                    themeMode = mode
+                                    prefs.edit().putInt("theme_mode", mode).apply()
+                                },
+                                navApp = navApp,
+                                onNavApp = { app ->
+                                    navApp = app
+                                    prefs.edit().putInt("nav_app", app).apply()
+                                },
+                                soundsOn = soundsOn,
+                                onSoundsOn = { value ->
+                                    soundsOn = value
+                                    prefs.edit().putBoolean("sounds_on", value).apply()
+                                },
+                                keepScreenOn = keepScreenOn,
+                                onKeepScreenOn = { value ->
+                                    keepScreenOn = value
+                                    prefs.edit().putBoolean("keep_screen_on", value).apply()
+                                },
+                                onBack = { navController.popBackStack() },
+                                onLogout = logout
+                            )
+                        }
+                        composable("help") { HelpScreen(onBack = { navController.popBackStack() }) }
+                        composable("support") { SupportScreen(onBack = { navController.popBackStack() }) }
+                        composable("invite") { InviteScreen(onBack = { navController.popBackStack() }) }
+                        composable("ratings") { RatingsScreen(onBack = { navController.popBackStack() }) }
+
+                        // ----- Ride flow -----
                         composable("request/{id}", arguments = idArgs) { entry ->
                             entry.requestOrNull()?.let { request ->
                                 RequestDetailScreen(
@@ -245,10 +292,6 @@ fun PickUpNav() {
                         )
                     }
                 }
-            }
-
-            menuMessage?.let { message ->
-                SkeletonDialog(message = message, onOk = { menuMessage = null })
             }
         }
     }
