@@ -2,6 +2,7 @@ package org.dmn.template
 
 import android.app.Activity
 import android.content.Context
+import android.view.WindowManager
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Column
@@ -83,6 +84,11 @@ fun PickUpNav() {
             val controller = WindowCompat.getInsetsController(window, view)
             controller.isAppearanceLightStatusBars = !dark
             controller.isAppearanceLightNavigationBars = !dark
+            if (keepScreenOn) {
+                window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            } else {
+                window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            }
         }
         view.keepScreenOn = keepScreenOn
     }
@@ -200,6 +206,9 @@ fun PickUpNav() {
                         composable("profile") {
                             ProfileScreen(onBack = { navController.popBackStack() })
                         }
+                        composable("history") {
+                            HistoryScreen(onBack = { navController.popBackStack() })
+                        }
                         composable("notifications") {
                             NotificationsScreen(onBack = { navController.popBackStack() })
                         }
@@ -284,7 +293,10 @@ fun PickUpNav() {
                             entry.requestOrNull()?.let { request ->
                                 TripCompleteScreen(
                                     request = request,
-                                    onDone = { navController.popBackStack("home", inclusive = false) }
+                                    onDone = {
+                                        DriverRepository.clearTrip(request.id)
+                                        navController.popBackStack("home", inclusive = false)
+                                    }
                                 )
                             }
                         }
@@ -312,4 +324,3 @@ fun PickUpNav() {
         }
     }
 }
-
