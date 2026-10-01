@@ -34,6 +34,8 @@ data class WalletEntry(val title: String, val note: String, val amount: Int)
 
 data class PayoutAccount(val bank: String, val number: String, val name: String)
 
+data class NotificationItem(val title: String, val body: String, val time: String, val unread: Boolean)
+
 // PLACEHOLDER DATA. Later, real ride requests replace this object
 // and the screens stay exactly as they are.
 object DriverRepository {
@@ -84,4 +86,18 @@ object DriverRepository {
     )
 
     fun payoutAccount(): PayoutAccount = PayoutAccount("GTBank", "0123456789", "Your Name")
+
+    // ----- Notifications -----
+    private val notifications = listOf(
+        NotificationItem("Insurance expires in 12 days", "Renew early so you can stay online.", "2h ago", true),
+        NotificationItem("Your rating went up", "Riders rated you 4.85 over the last 7 days.", "5h ago", true),
+        NotificationItem("Wallet top-up received", "₦5,000 was added to your wallet.", "Yesterday", true),
+        NotificationItem("Safety tip", "Add an SOS contact so help can reach you faster.", "Yesterday", true),
+        NotificationItem("Welcome to Pick Up", "Your account has been approved.", "3 days ago", false),
+        NotificationItem("Daily fee reminder", "Your flat fee is taken from your wallet each day you drive.", "3 days ago", false)
+    )
+
+    fun notifications(): List<NotificationItem> = notifications
+
+    fun unreadCount(): Int = notifications.count { it.unread }
 }
