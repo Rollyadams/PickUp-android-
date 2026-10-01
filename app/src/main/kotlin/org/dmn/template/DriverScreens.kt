@@ -27,6 +27,7 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -128,6 +129,15 @@ fun DriverHomeScreen(
     // Nearest pickup first. With live data this list refreshes as requests change.
     val requests = remember { DriverRepository.requests().sortedBy { it.etaMinutes } }
 
+    val locationOk = rememberAlwaysLocationGranted()
+    val requestLocation = rememberLocationRequester()
+    var showLocationDialog by remember { mutableStateOf(false) }
+
+    // Going online needs "Allow all the time". Losing it takes the driver offline.
+    LaunchedEffect(locationOk) {
+        if (!locationOk && online) onOnlineChange(false)
+    }
+
     Surface(modifier = Modifier.fillMaxSize(), color = PuBg) {
         Column(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
             Row(
@@ -152,7 +162,9 @@ fun DriverHomeScreen(
                 }
                 Switch(
                     checked = online,
-                    onCheckedChange = onOnlineChange,
+                    onCheckedChange = { wantOnline ->
+                        if (wantOnline && !locationOk) showLocationDialog = true else onOnlineChange(wantOnline)
+                    },
                     colors = SwitchDefaults.colors(
                         checkedThumbColor = PuAmberInk,
                         checkedTrackColor = PuAmber,
@@ -178,6 +190,13 @@ fun DriverHomeScreen(
                 modifier = Modifier.padding(start = 20.dp, top = 4.dp, bottom = 6.dp)
             )
         }
+    }
+
+    if (showLocationDialog) {
+        LocationGateDialog(
+            onAllow = { requestLocation() },
+            onDismiss = { showLocationDialog = false }
+        )
     }
 }
 
@@ -231,6 +250,9 @@ private fun RequestCard(r: RideRequest, onClick: () -> Unit) {
 @Composable
 fun RequestDetailScreen(request: RideRequest, onBack: () -> Unit, onAccepted: () -> Unit) {
     var dialogMessage by remember { mutableStateOf<String?>(null) }
+    val locationOk = rememberAlwaysLocationGranted()
+    val requestLocation = rememberLocationRequester()
+    var showLocationDialog by remember { mutableStateOf(false) }
     val counters = remember(request) { counterOffers(request.fare) }
     val km = "%.1f".format(request.distanceKm)
 
@@ -284,7 +306,10 @@ fun RequestDetailScreen(request: RideRequest, onBack: () -> Unit, onAccepted: ()
 
             Spacer(Modifier.height(12.dp))
 
-            PrimaryButton(text = "Accept ${naira(request.fare)}", onClick = onAccepted)
+            PrimaryButton(
+                text = "Accept ${naira(request.fare)}",
+                onClick = { if (locationOk) onAccepted() else showLocationDialog = true }
+            )
 
             if (counters.isNotEmpty()) {
                 Spacer(Modifier.height(10.dp))
@@ -310,5 +335,12 @@ fun RequestDetailScreen(request: RideRequest, onBack: () -> Unit, onAccepted: ()
             dialogMessage = null
             onBack()
         })
+    }
+
+    if (showLocationDialog) {
+        LocationGateDialog(
+            onAllow = { requestLocation() },
+            onDismiss = { showLocationDialog = false }
+        )
     }
 }
