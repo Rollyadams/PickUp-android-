@@ -5,6 +5,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,6 +27,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -64,6 +68,38 @@ private val stepIntros = listOf(
     "Check everything, then send it for review."
 )
 
+private val carMakes = listOf(
+    "Toyota", "Honda", "Hyundai", "Kia", "Nissan", "Mercedes-Benz", "Lexus", "Ford",
+    "Peugeot", "Volkswagen", "Mazda", "Mitsubishi", "Suzuki", "BMW", "Chevrolet", "Renault", "Other"
+)
+
+private val carModels = mapOf(
+    "Toyota" to listOf("Corolla", "Camry", "Avensis", "Yaris", "Vitz", "Prius", "RAV4", "Highlander", "Sienna", "Venza", "Other"),
+    "Honda" to listOf("Accord", "Civic", "City", "Fit", "CR-V", "Pilot", "Other"),
+    "Hyundai" to listOf("Elantra", "Sonata", "Accent", "i10", "i20", "Tucson", "Santa Fe", "Other"),
+    "Kia" to listOf("Rio", "Cerato", "Optima", "Picanto", "Sportage", "Sorento", "Other"),
+    "Nissan" to listOf("Altima", "Sentra", "Almera", "Micra", "Versa", "Qashqai", "Rogue", "Other"),
+    "Mercedes-Benz" to listOf("C-Class", "E-Class", "GLK", "ML", "Other"),
+    "Lexus" to listOf("ES 350", "IS", "RX 350", "Other"),
+    "Ford" to listOf("Focus", "Fusion", "Fiesta", "Escape", "Edge", "Other"),
+    "Peugeot" to listOf("206", "301", "307", "406", "508", "Other"),
+    "Volkswagen" to listOf("Golf", "Jetta", "Passat", "Polo", "Other"),
+    "Mazda" to listOf("3", "6", "CX-5", "Other"),
+    "Mitsubishi" to listOf("Lancer", "Outlander", "Other"),
+    "Suzuki" to listOf("Swift", "Alto", "Ciaz", "Other"),
+    "BMW" to listOf("3 Series", "5 Series", "Other"),
+    "Chevrolet" to listOf("Cruze", "Malibu", "Spark", "Other"),
+    "Renault" to listOf("Logan", "Symbol", "Other"),
+    "Other" to listOf("Other")
+)
+
+// PLACEHOLDER range: the real minimum car age is a business decision.
+private val carYears = (2026 downTo 2008).map { it.toString() }
+
+private val carColours = listOf(
+    "White", "Black", "Silver", "Grey", "Blue", "Red", "Green", "Gold", "Brown", "Yellow", "Other"
+)
+
 @Composable
 private fun FormField(
     label: String,
@@ -85,6 +121,54 @@ private fun FormField(
         modifier = Modifier.fillMaxWidth(),
         colors = fieldColors()
     )
+    Spacer(Modifier.height(14.dp))
+}
+
+/** A pick-from-a-list field, so drivers choose instead of typing whatever they like. */
+@Composable
+private fun DropdownField(
+    label: String,
+    value: String,
+    options: List<String>,
+    enabled: Boolean = true,
+    onSelect: (String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Text(label, color = PuMuted, fontSize = 13.sp)
+    Spacer(Modifier.height(6.dp))
+    Box(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .background(PuCard)
+                .border(1.dp, PuLine, RoundedCornerShape(4.dp))
+                .clickable(enabled = enabled) { expanded = true }
+                .padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                if (value.isEmpty()) "Select" else value,
+                color = if (value.isEmpty() || !enabled) PuMuted else PuInk,
+                fontSize = 16.sp,
+                modifier = Modifier.weight(1f)
+            )
+            Text("▾", color = PuMuted, fontSize = 18.sp)
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            options.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(option) },
+                    onClick = {
+                        expanded = false
+                        onSelect(option)
+                    }
+                )
+            }
+        }
+    }
     Spacer(Modifier.height(14.dp))
 }
 
@@ -161,6 +245,7 @@ fun OnboardingScreen(onSubmitted: () -> Unit) {
 
     var docsAdded by rememberSaveable { mutableStateOf("") }
 
+    var carMake by rememberSaveable { mutableStateOf("") }
     var carModel by rememberSaveable { mutableStateOf("") }
     var carYear by rememberSaveable { mutableStateOf("") }
     var carColour by rememberSaveable { mutableStateOf("") }
@@ -179,8 +264,8 @@ fun OnboardingScreen(onSubmitted: () -> Unit) {
     val canNext = when (step) {
         0 -> name.trim().length >= 3 && nin.length == 11 && licence.length >= 8
         1 -> has("nin") && has("licence") && has("selfie")
-        2 -> carModel.trim().length >= 2 && carYear.length == 4 &&
-            carColour.trim().length >= 3 && plate.trim().length >= 5
+        2 -> carMake.isNotEmpty() && carModel.isNotEmpty() && carYear.isNotEmpty() &&
+            carColour.isNotEmpty() && plate.trim().length >= 5
         3 -> listOf("reg", "ins", "road", "front", "back", "inside").all { has(it) }
         4 -> locationOk
         else -> agreed
@@ -255,12 +340,17 @@ fun OnboardingScreen(onSubmitted: () -> Unit) {
                         DocCard("Selfie", "Take it now in good light, facing the camera", has("selfie"), true) { add("selfie") }
                     }
                     2 -> {
-                        FormField("Car make and model", carModel, { carModel = it })
-                        FormField(
-                            "Year", carYear, { carYear = it },
-                            keyboard = KeyboardType.Number, maxLength = 4, digitsOnly = true
-                        )
-                        FormField("Colour", carColour, { carColour = it }, maxLength = 20)
+                        DropdownField("Car make", carMake, carMakes) { make ->
+                            if (make != carMake) carModel = ""
+                            carMake = make
+                        }
+                        DropdownField(
+                            "Car model", carModel,
+                            carModels[carMake] ?: emptyList(),
+                            enabled = carMake.isNotEmpty()
+                        ) { carModel = it }
+                        DropdownField("Year", carYear, carYears) { carYear = it }
+                        DropdownField("Colour", carColour, carColours) { carColour = it }
                         FormField("Number plate", plate, { plate = it.uppercase() }, maxLength = 12)
                     }
                     3 -> {
@@ -306,7 +396,7 @@ fun OnboardingScreen(onSubmitted: () -> Unit) {
                             MoneyRow("Name", name)
                             MoneyRow("National ID", "•••••••" + nin.takeLast(4))
                             MoneyRow("Licence", "•••••" + licence.takeLast(4))
-                            MoneyRow("Car", "$carModel · $plate")
+                            MoneyRow("Car", "$carMake $carModel · $plate")
                             MoneyRow("Documents and photos", "$docCount of 9")
                             MoneyRow("Location", "On all the time")
                         }
