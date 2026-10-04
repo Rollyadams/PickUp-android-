@@ -24,6 +24,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+/** Not a screen: tapping this opens the driver registration page in the browser. */
+const val REGISTER_ROUTE = "register"
+
+// PLACEHOLDER: replace with the real page where drivers upload their documents and details.
+const val REGISTRATION_URL = "https://www.rollyadamstechworld.com.ng"
+
 private data class MenuEntry(val route: String, val glyph: String, val label: String)
 
 private val menuEntries = listOf(
@@ -32,6 +38,7 @@ private val menuEntries = listOf(
     MenuEntry("settings", "⚙️", "Settings"),
     MenuEntry("help", "❓", "Help"),
     MenuEntry("support", "💬", "Support"),
+    MenuEntry(REGISTER_ROUTE, "📝", "Online registration"),
     MenuEntry("invite", "🎁", "Invite a friend")
 )
 
