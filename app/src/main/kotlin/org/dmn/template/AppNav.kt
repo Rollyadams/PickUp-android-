@@ -1,8 +1,13 @@
 package org.dmn.template
 
 import android.app.Activity
+import android.content.ActivityNotFoundException
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.view.WindowManager
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Column
@@ -139,7 +144,17 @@ fun PickUpNav() {
                         unread = DriverRepository.unreadCount(),
                         onNavigate = { route ->
                             scope.launch { drawerState.close() }
-                            navController.navigate(route) { launchSingleTop = true }
+                            if (route == REGISTER_ROUTE) {
+                                try {
+                                    context.startActivity(
+                                        Intent(Intent.ACTION_VIEW, Uri.parse(REGISTRATION_URL))
+                                    )
+                                } catch (e: ActivityNotFoundException) {
+                                    // No browser installed: nothing to open.
+                                }
+                            } else {
+                                navController.navigate(route) { launchSingleTop = true }
+                            }
                         },
                         onLogout = logout
                     )
@@ -149,7 +164,11 @@ fun PickUpNav() {
                     NavHost(
                         navController = navController,
                         startDestination = startDestination,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        enterTransition = { EnterTransition.None },
+                        exitTransition = { ExitTransition.None },
+                        popEnterTransition = { EnterTransition.None },
+                        popExitTransition = { ExitTransition.None }
                     ) {
                         composable("phone") {
                             PhoneEntryScreen(onSendCode = { navController.navigate("code") })
