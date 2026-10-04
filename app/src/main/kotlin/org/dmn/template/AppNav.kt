@@ -206,9 +206,6 @@ fun PickUpNav() {
                         composable("profile") {
                             ProfileScreen(onBack = { navController.popBackStack() })
                         }
-                        composable("history") {
-                            HistoryScreen(onBack = { navController.popBackStack() })
-                        }
                         composable("notifications") {
                             NotificationsScreen(onBack = { navController.popBackStack() })
                         }
