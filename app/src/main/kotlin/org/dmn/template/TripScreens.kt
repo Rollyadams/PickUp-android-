@@ -76,8 +76,18 @@ private fun openNavigation(context: Context, destination: String): Boolean {
 private fun clock(totalSeconds: Int): String =
     "%02d:%02d".format(totalSeconds / 60, totalSeconds % 60)
 
-// PLACEHOLDER: how long a driver waits before they can report a no-show.
-private const val NO_SHOW_SECONDS = 120
+/** m:ss, with a minus sign once the time has run past zero (e.g. -0:23). */
+private fun clockSigned(totalSeconds: Int): String {
+    val abs = kotlin.math.abs(totalSeconds)
+    val sign = if (totalSeconds < 0) "-" else ""
+    return "$sign${abs / 60}:${"%02d".format(abs % 60)}"
+}
+
+// After this much waiting, the driver can remind the rider.
+private const val REMIND_AFTER_SECONDS = 120
+
+// After this much waiting, the driver can cancel with no penalty. The reminder button goes away.
+private const val FREE_CANCEL_SECONDS = 300
 
 private val cancelReasons = listOf(
     "Rider not at pickup",
@@ -96,6 +106,21 @@ private fun NavigateButton(label: String, onClick: () -> Unit, modifier: Modifie
         colors = ButtonDefaults.buttonColors(containerColor = PuInk, contentColor = PuBg)
     ) {
         Text("➤  $label", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+    }
+}
+
+/** Big, bold timer shown in the top right corner of the map. */
+@Composable
+private fun ClockBadge(label: String, value: String, bg: Color, fg: Color, modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(14.dp))
+            .background(bg)
+            .padding(horizontal = 14.dp, vertical = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(label, color = fg, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        Text(value, color = fg, fontSize = 32.sp, fontWeight = FontWeight.ExtraBold)
     }
 }
 
@@ -137,6 +162,10 @@ fun PickupNavigationScreen(
     val context = LocalContext.current
     var arrived by remember { mutableStateOf(false) }
     var waitSeconds by remember { mutableIntStateOf(0) }
+    // Seconds since the ride was accepted, while the driver is still on the way.
+    var driveSeconds by remember { mutableIntStateOf(0) }
+    var reminderSent by remember { mutableStateOf(false) }
+    var riderOnTheWay by remember { mutableStateOf(false) }
     var showCancel by remember { mutableStateOf(false) }
     var reason by remember { mutableStateOf<String?>(null) }
     var showNoMaps by remember { mutableStateOf(false) }
@@ -149,15 +178,22 @@ fun PickupNavigationScreen(
     // The phone's back button does nothing here. Cancelling is only via "Cancel ride".
     BackHandler { }
 
-    // Waiting timer starts the moment the driver taps "I've arrived".
+    // Before arriving: the time to pickup counts down, then keeps going below zero.
+    // The moment the driver taps "I've arrived": the waiting time counts up.
     LaunchedEffect(arrived) {
         if (arrived) {
             while (true) {
                 delay(1000)
                 waitSeconds++
             }
+        } else {
+            while (true) {
+                delay(1000)
+                driveSeconds++
+            }
         }
     }
+    val secondsToPickup = request.etaMinutes * 60 - driveSeconds
 
     Surface(modifier = Modifier.fillMaxSize(), color = PuBg) {
         Column(
@@ -173,11 +209,6 @@ fun PickupNavigationScreen(
             ) {
                 TextButton(onClick = { reason = null; showCancel = true }) {
                     Text("← Cancel ride", color = PuDanger, fontWeight = FontWeight.Bold)
-                }
-                if (arrived) {
-                    Pill("Waiting ${clock(waitSeconds)}", PuAmber, PuAmberInk)
-                } else {
-                    Pill("${request.etaMinutes} min away", PuCard, PuInk)
                 }
             }
             Spacer(Modifier.height(4.dp))
@@ -212,6 +243,24 @@ fun PickupNavigationScreen(
             Spacer(Modifier.height(12.dp))
 
             MapPlaceholder(Modifier.weight(1f)) {
+                if (arrived) {
+                    ClockBadge(
+                        label = "WAITING",
+                        value = clockSigned(waitSeconds),
+                        bg = PuAmber,
+                        fg = PuAmberInk,
+                        modifier = Modifier.align(Alignment.TopEnd).padding(12.dp)
+                    )
+                } else {
+                    val late = secondsToPickup < 0
+                    ClockBadge(
+                        label = if (late) "LATE" else "ARRIVING IN",
+                        value = clockSigned(secondsToPickup),
+                        bg = if (late) PuDanger else PuAmber,
+                        fg = if (late) Color.White else PuAmberInk,
+                        modifier = Modifier.align(Alignment.TopEnd).padding(12.dp)
+                    )
+                }
                 NavigateButton(
                     label = "Navigate",
                     onClick = { if (!openNavigation(context, request.pickup)) showNoMaps = true },
@@ -223,9 +272,39 @@ fun PickupNavigationScreen(
             Spacer(Modifier.height(12.dp))
 
             if (arrived) {
-                if (waitSeconds >= NO_SHOW_SECONDS) {
-                    OutlineButton("Rider didn't show up", { onCancel() }, color = PuDanger)
-                    Spacer(Modifier.height(10.dp))
+                // Between 2 and 5 minutes of waiting: remind the rider. After 5 minutes, no button.
+                if (waitSeconds in REMIND_AFTER_SECONDS until FREE_CANCEL_SECONDS) {
+                    when {
+                        riderOnTheWay -> {
+                            Text(
+                                "${request.riderName}: I'm on my way",
+                                color = PuAmber, fontSize = 15.sp, fontWeight = FontWeight.Bold
+                            )
+                            Spacer(Modifier.height(10.dp))
+                        }
+                        reminderSent -> {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    "Reminder sent to ${request.riderName}",
+                                    color = PuMuted, fontSize = 14.sp
+                                )
+                                TextButton(onClick = { riderOnTheWay = true }) {
+                                    Text("Demo: rider replies", color = PuAmber, fontSize = 12.sp)
+                                }
+                            }
+                        }
+                        else -> {
+                            OutlineButton(
+                                "Remind ${request.riderName} I'm waiting",
+                                { reminderSent = true }
+                            )
+                            Spacer(Modifier.height(10.dp))
+                        }
+                    }
                 }
                 PrimaryButton("Start trip", { verifyStage = 0; showVerify = true })
             } else {
@@ -253,6 +332,13 @@ fun PickupNavigationScreen(
             title = { Text("Why are you cancelling?") },
             text = {
                 Column {
+                    if (arrived && waitSeconds >= FREE_CANCEL_SECONDS) {
+                        Text(
+                            "You waited 5 minutes, so there is no penalty for cancelling.",
+                            color = PuAmber, fontSize = 13.sp, fontWeight = FontWeight.Bold
+                        )
+                        Spacer(Modifier.height(8.dp))
+                    }
                     cancelReasons.forEach { item ->
                         Row(
                             modifier = Modifier
