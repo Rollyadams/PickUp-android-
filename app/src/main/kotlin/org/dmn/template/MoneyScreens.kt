@@ -1,6 +1,7 @@
 package org.dmn.template
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,6 +27,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -33,14 +35,13 @@ import androidx.compose.ui.unit.sp
 @Composable
 fun IncomeScreen(onMenu: () -> Unit) {
     var period by remember { mutableIntStateOf(0) }
-    var showPlan by remember { mutableStateOf(false) }
 
     val data = DriverRepository.income(period)
     val flatFee = FLAT_FEE * data.daysWorked
     val vat = vatOn(data.fares)
     val net = data.fares - flatFee - vat
     val perKmRate = if (data.km > 0) data.fares / data.km else 0
-    val progress = (net.toFloat() / data.goal).coerceIn(0f, 1f)
+    val trips = DriverRepository.trips().filter { period != 0 || it.day == "Today" }
 
     Surface(modifier = Modifier.fillMaxSize(), color = PuBg) {
         Column(
@@ -85,37 +86,58 @@ fun IncomeScreen(onMenu: () -> Unit) {
                 StatTile("${data.km} km", "Mileage", Modifier.weight(1f))
                 StatTile(naira(perKmRate), "Per km", Modifier.weight(1f))
             }
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(20.dp))
 
-            InfoCard {
-                Text("Income plan", color = PuInk, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                Spacer(Modifier.height(4.dp))
-                Text("${naira(net)} of ${naira(data.goal)}", color = PuMuted, fontSize = 14.sp)
-                Spacer(Modifier.height(10.dp))
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(10.dp)
-                        .clip(RoundedCornerShape(50))
-                        .background(PuChip)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth(progress)
-                            .height(10.dp)
-                            .clip(RoundedCornerShape(50))
-                            .background(PuAmber)
-                    )
-                }
-                Spacer(Modifier.height(14.dp))
-                OutlineButton("Set income plan", { showPlan = true })
-            }
+            Text("Trips", color = PuInk, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(4.dp))
+            TripHistoryList(trips)
             Spacer(Modifier.height(8.dp))
         }
     }
+}
 
-    if (showPlan) {
-        SkeletonDialog(message = "Setting your own income goal comes in a later batch.", onOk = { showPlan = false })
+/** Trips grouped by day. Tap a trip to see its money breakdown. */
+@Composable
+fun TripHistoryList(trips: List<TripRecord>) {
+    var open by remember(trips.size) { mutableStateOf(-1) }
+    var lastDay = ""
+
+    trips.forEachIndexed { index, trip ->
+        if (trip.day != lastDay) {
+            lastDay = trip.day
+            Spacer(Modifier.height(8.dp))
+            Text(trip.day, color = PuMuted, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(6.dp))
+        }
+        val expanded = open == index
+        InfoCard {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { open = if (expanded) -1 else index }
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(trip.pickup, color = PuInk, fontSize = 14.sp)
+                        Text("→ ${trip.dropoff}", color = PuInk, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    if (trip.status == "Completed") {
+                        Text(naira(trip.fare), color = PuInk, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                    } else {
+                        Pill(trip.status, PuDanger, Color.White, 11.sp)
+                    }
+                }
+                if (expanded && trip.status == "Completed") {
+                    Spacer(Modifier.height(8.dp))
+                    MoneyRow("Distance", "${"%.1f".format(trip.km)} km")
+                    MoneyRow("Paid by", trip.payment)
+                    MoneyRow("VAT (7.5%)", "−" + naira(vatOn(trip.fare)))
+                    MoneyRow("You received", naira(trip.fare), strong = true)
+                }
+            }
+        }
+        Spacer(Modifier.height(10.dp))
     }
 }
 
