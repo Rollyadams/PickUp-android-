@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
@@ -179,11 +181,16 @@ fun DriverHomeScreen(
 
             LazyColumn(
                 modifier = Modifier.fillMaxWidth().weight(1f),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                contentPadding = PaddingValues(vertical = 0.dp)
             ) {
                 items(requests) { request ->
                     RequestCard(request) { onOpenRequest(request.id) }
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(1.dp)
+                            .background(PuLine)
+                    )
                 }
             }
             Text(
@@ -206,45 +213,44 @@ fun DriverHomeScreen(
 private fun RequestCard(r: RideRequest, onClick: () -> Unit) {
     val km = "%.1f".format(r.distanceKm)
 
-    Card(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = PuCard)
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 20.dp, vertical = 10.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(naira(r.fare), color = PuInk, fontSize = 26.sp, fontWeight = FontWeight.Bold)
-                if (isFairRate(r)) Pill("Fair fare", PuAmber, PuAmberInk)
-            }
-            Spacer(Modifier.height(2.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    "${naira(perKm(r))}/km",
-                    color = PuAmber, fontSize = 18.sp, fontWeight = FontWeight.Bold
-                )
-                Text(
-                    "  ·  $km km  ·  ${r.etaMinutes} min away",
-                    color = PuMuted, fontSize = 13.sp
-                )
-            }
-            Spacer(Modifier.height(10.dp))
-            Text("From  ${r.pickup}", color = PuInk, fontSize = 15.sp)
-            Text("To  ${r.dropoff}", color = PuInk, fontSize = 15.sp)
-            Spacer(Modifier.height(10.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                RiderAvatar(r.riderName, 24.dp)
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    "${r.riderName} · ★ ${r.riderRating}",
-                    color = PuMuted, fontSize = 12.sp
-                )
-                Spacer(Modifier.weight(1f))
-                Pill(r.paymentMethod, PuChip, PuInk, 11.sp)
-            }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(naira(r.fare), color = PuInk, fontSize = 26.sp, fontWeight = FontWeight.Bold)
+            if (isFairRate(r)) Pill("Fair fare", PuAmber, PuAmberInk)
+        }
+        Spacer(Modifier.height(2.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                "${naira(perKm(r))}/km",
+                color = PuAmber, fontSize = 18.sp, fontWeight = FontWeight.Bold
+            )
+            Text(
+                "  ·  $km km  ·  ${r.etaMinutes} min away",
+                color = PuMuted, fontSize = 13.sp
+            )
+        }
+        Spacer(Modifier.height(10.dp))
+        Text("From  ${r.pickup}", color = PuInk, fontSize = 15.sp)
+        Text("To  ${r.dropoff}", color = PuInk, fontSize = 15.sp)
+        Spacer(Modifier.height(10.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            RiderAvatar(r.riderName, 24.dp)
+            Spacer(Modifier.width(8.dp))
+            Text(
+                "${r.riderName} · ★ ${r.riderRating}",
+                color = PuMuted, fontSize = 12.sp
+            )
+            Spacer(Modifier.weight(1f))
+            Pill(r.paymentMethod, PuChip, PuInk, 11.sp)
         }
     }
 }
