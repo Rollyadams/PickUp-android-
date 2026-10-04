@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
@@ -141,10 +142,9 @@ fun PickupNavigationScreen(
     var showNoMaps by remember { mutableStateOf(false) }
     var showCall by remember { mutableStateOf(false) }
     var showChat by remember { mutableStateOf(false) }
-    var showCode by remember { mutableStateOf(false) }
-    var code by remember { mutableStateOf("") }
-    var codeError by remember { mutableStateOf<String?>(null) }
-    var tries by remember { mutableIntStateOf(0) }
+    var showVerify by remember { mutableStateOf(false) }
+    var verifyStage by remember { mutableIntStateOf(0) }
+    var showMismatch by remember { mutableStateOf(false) }
 
     // The phone's back button does nothing here. Cancelling is only via "Cancel ride".
     BackHandler { }
@@ -227,7 +227,7 @@ fun PickupNavigationScreen(
                     OutlineButton("Rider didn't show up", { onCancel() }, color = PuDanger)
                     Spacer(Modifier.height(10.dp))
                 }
-                PrimaryButton("Start trip", { code = ""; codeError = null; showCode = true })
+                PrimaryButton("Start trip", { verifyStage = 0; showVerify = true })
             } else {
                 PrimaryButton("I've arrived", { arrived = true })
             }
@@ -283,63 +283,71 @@ fun PickupNavigationScreen(
     if (showNoMaps) {
         SkeletonDialog(message = "No maps app found on this phone.", onOk = { showNoMaps = false })
     }
-    if (showCode) {
-        val canStart = code.length == 4 && tries < 3
+    if (showVerify) {
+        val revealed = verifyStage == 1
         AlertDialog(
-            onDismissRequest = { showCode = false },
+            onDismissRequest = { },
             confirmButton = {
-                TextButton(
-                    onClick = {
-                        if (code == request.startCode) {
-                            showCode = false
-                            onStartTrip()
-                        } else {
-                            tries++
-                            codeError = if (tries >= 3) {
-                                "Too many wrong tries. Contact support."
-                            } else {
-                                "That code is wrong. Ask ${request.riderName} to read it again."
-                            }
-                        }
-                    },
-                    enabled = canStart
-                ) {
-                    Text("Start trip", color = if (canStart) PuAmber else PuMuted, fontWeight = FontWeight.Bold)
+                if (!revealed) {
+                    TextButton(onClick = { verifyStage = 1 }) {
+                        Text("Demo: rider taps verify", color = PuAmber)
+                    }
+                } else {
+                    TextButton(onClick = { showVerify = false; onStartTrip() }) {
+                        Text("Same code, start trip", color = PuAmber, fontWeight = FontWeight.Bold)
+                    }
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showCode = false }) {
-                    Text("Cancel", color = PuMuted)
+                if (!revealed) {
+                    TextButton(onClick = { showVerify = false }) {
+                        Text("Cancel", color = PuMuted)
+                    }
+                } else {
+                    TextButton(onClick = { showMismatch = true }) {
+                        Text("Different code", color = PuDanger)
+                    }
                 }
             },
-            title = { Text("Enter the rider's code") },
+            title = { Text(if (revealed) "Check the code" else "Waiting for ${request.riderName}") },
             text = {
-                Column {
+                if (!revealed) {
                     Text(
-                        "Ask ${request.riderName} to read the 4-digit code from their app. This proves the rider is in your car.",
-                        color = PuMuted, fontSize = 13.sp
+                        "Ask ${request.riderName} to tap \"I'm with my driver\" in their app. The code appears on both phones only after they tap. " +
+                            "Skeleton build: use the demo button to pretend they did."
                     )
-                    Spacer(Modifier.height(12.dp))
-                    OutlinedTextField(
-                        value = code,
-                        onValueChange = { input ->
-                            if (input.length <= 4 && input.all { it.isDigit() }) {
-                                code = input
-                                codeError = null
-                            }
-                        },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        colors = fieldColors(),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    codeError?.let { message ->
-                        Spacer(Modifier.height(6.dp))
-                        Text(message, color = PuDanger, fontSize = 12.sp)
+                } else {
+                    Column {
+                        Text("Check that this code matches the code on ${request.riderName}'s phone.")
+                        Spacer(Modifier.height(12.dp))
+                        Text(
+                            request.startCode,
+                            color = PuInk, fontSize = 44.sp, fontWeight = FontWeight.Bold
+                        )
                     }
-                    Spacer(Modifier.height(8.dp))
-                    Text("Demo only: the code is ${request.startCode}", color = PuMuted, fontSize = 11.sp)
                 }
+            },
+            containerColor = PuCard,
+            titleContentColor = PuInk,
+            textContentColor = PuMuted
+        )
+    }
+    if (showMismatch) {
+        AlertDialog(
+            onDismissRequest = { },
+            confirmButton = {
+                TextButton(onClick = { showMismatch = false; showVerify = false; onCancel() }) {
+                    Text("Cancel ride", color = PuDanger, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showMismatch = false }) {
+                    Text("Go back", color = PuMuted)
+                }
+            },
+            title = { Text("Do not start this trip") },
+            text = {
+                Text("The codes do not match, so this may not be your rider. Stay safe: cancel the ride or contact support.")
             },
             containerColor = PuCard,
             titleContentColor = PuInk,
@@ -630,6 +638,7 @@ fun TripCompleteScreen(request: RideRequest, onDone: () -> Unit) {
     val vat = vatOn(request.fare)
     var stars by remember { mutableIntStateOf(0) }
     var flags by remember { mutableStateOf("") }
+    var note by remember { mutableStateOf("") }
 
     // No going back into a finished trip.
     BackHandler { }
@@ -639,6 +648,7 @@ fun TripCompleteScreen(request: RideRequest, onDone: () -> Unit) {
             modifier = Modifier
                 .fillMaxSize()
                 .systemBarsPadding()
+                .imePadding()
                 .padding(horizontal = 20.dp, vertical = 16.dp)
         ) {
             Column(
@@ -738,6 +748,18 @@ fun TripCompleteScreen(request: RideRequest, onDone: () -> Unit) {
                             Spacer(Modifier.height(8.dp))
                         }
                     }
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = note,
+                        onValueChange = { if (it.length <= 200) note = it },
+                        placeholder = {
+                            Text("Add a comment or report a problem (optional)", color = PuMuted, fontSize = 13.sp)
+                        },
+                        minLines = 2,
+                        maxLines = 4,
+                        colors = fieldColors(),
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
                 Spacer(Modifier.height(8.dp))
             }
