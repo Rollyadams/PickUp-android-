@@ -18,6 +18,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.OutlinedTextField
@@ -263,9 +265,7 @@ fun RequestDetailScreen(request: RideRequest, onBack: () -> Unit, onAccepted: ()
                 .systemBarsPadding()
                 .padding(horizontal = 20.dp, vertical = 12.dp)
         ) {
-            TextButton(onClick = onBack) {
-                Text("← Back to requests", color = PuMuted)
-            }
+            Spacer(Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(naira(request.fare), color = PuInk, fontSize = 40.sp, fontWeight = FontWeight.Bold)
                 if (isFairRate(request)) {
@@ -326,6 +326,17 @@ fun RequestDetailScreen(request: RideRequest, onBack: () -> Unit, onAccepted: ()
                         )
                     }
                 }
+            }
+
+            Spacer(Modifier.height(10.dp))
+            Button(
+                onClick = onBack,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = PuChip, contentColor = PuInk)
+            ) {
+                Text("Ignore", fontSize = 16.sp, fontWeight = FontWeight.Bold)
             }
         }
     }
