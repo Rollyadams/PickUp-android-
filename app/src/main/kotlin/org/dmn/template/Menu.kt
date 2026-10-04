@@ -27,7 +27,6 @@ import androidx.compose.ui.unit.sp
 private data class MenuEntry(val route: String, val glyph: String, val label: String)
 
 private val menuEntries = listOf(
-    MenuEntry("history", "🕘", "Trip history"),
     MenuEntry("notifications", "🔔", "Notifications"),
     MenuEntry("safety", "🛡️", "Safety"),
     MenuEntry("settings", "⚙️", "Settings"),
