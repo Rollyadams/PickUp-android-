@@ -332,13 +332,6 @@ fun PickupNavigationScreen(
             title = { Text("Why are you cancelling?") },
             text = {
                 Column {
-                    if (arrived && waitSeconds >= FREE_CANCEL_SECONDS) {
-                        Text(
-                            "You waited 5 minutes, so there is no penalty for cancelling.",
-                            color = PuAmber, fontSize = 13.sp, fontWeight = FontWeight.Bold
-                        )
-                        Spacer(Modifier.height(8.dp))
-                    }
                     cancelReasons.forEach { item ->
                         Row(
                             modifier = Modifier
