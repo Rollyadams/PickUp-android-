@@ -79,7 +79,7 @@ fun IncomeScreen(onMenu: () -> Unit) {
                 Spacer(Modifier.height(6.dp))
                 MoneyRow("Net income", naira(net), strong = true)
             }
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(4.dp))
 
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 StatTile("${data.orders}", "Orders", Modifier.weight(1f))
@@ -137,7 +137,7 @@ fun TripHistoryList(trips: List<TripRecord>) {
                 }
             }
         }
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(4.dp))
     }
 }
 
@@ -179,7 +179,7 @@ fun WalletScreen(onMenu: () -> Unit) {
                 Spacer(Modifier.height(14.dp))
                 PrimaryButton("Top up wallet", { showTopUp = true })
             }
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(4.dp))
 
             InfoCard {
                 Text("Taken today", color = PuInk, fontSize = 16.sp, fontWeight = FontWeight.Bold)
@@ -187,7 +187,7 @@ fun WalletScreen(onMenu: () -> Unit) {
                 MoneyRow("Flat fee", "−" + naira(FLAT_FEE))
                 MoneyRow("VAT collected", "−" + naira(vatOn(today.fares)))
             }
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(4.dp))
 
             InfoCard {
                 Text("Where riders pay you", color = PuInk, fontSize = 16.sp, fontWeight = FontWeight.Bold)
@@ -203,7 +203,7 @@ fun WalletScreen(onMenu: () -> Unit) {
                 Spacer(Modifier.height(12.dp))
                 OutlineButton("Change account", { showAccount = true })
             }
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(4.dp))
 
             Text("Recent activity", color = PuInk, fontSize = 16.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(6.dp))
