@@ -72,7 +72,7 @@ private fun SettingRow(title: String, subtitle: String? = null, onClick: (() -> 
         modifier = Modifier
             .fillMaxWidth()
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-            .padding(vertical = 12.dp),
+            .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
@@ -89,7 +89,7 @@ private fun SwitchRow(title: String, subtitle: String?, checked: Boolean, onChan
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onChange(!checked) }
-            .padding(vertical = 10.dp),
+            .padding(vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
@@ -137,7 +137,7 @@ fun SettingsScreen(
             Spacer(Modifier.height(4.dp))
             Text("Auto follows your phone's light or dark setting.", color = PuMuted, fontSize = 12.sp)
         }
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(4.dp))
 
         InfoCard {
             Text("Navigation app", color = PuInk, fontSize = 16.sp, fontWeight = FontWeight.Bold)
@@ -146,7 +146,7 @@ fun SettingsScreen(
             Spacer(Modifier.height(4.dp))
             Text("Used by the Navigate button. Waze must be installed.", color = PuMuted, fontSize = 12.sp)
         }
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(4.dp))
 
         InfoCard {
             SwitchRow("Ride request sounds", "Play a sound for new requests (sound comes later)", soundsOn, onSoundsOn)
@@ -155,13 +155,13 @@ fun SettingsScreen(
             SettingRow("Language", "English")
             SettingRow("In-app calls") { dialog = "In-app calls come in a later batch." }
         }
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(4.dp))
 
         InfoCard {
             SettingRow("Legal documents") { dialog = "Terms and Privacy Policy will open here." }
             SettingRow("App version", appVersion())
         }
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(4.dp))
 
         OutlineButton("Log out", onLogout, color = PuDanger)
         Spacer(Modifier.height(10.dp))
@@ -263,7 +263,7 @@ fun SafetyScreen(onBack: () -> Unit, onSupport: () -> Unit) {
                 }
             }
         }
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(4.dp))
 
         InfoCard {
             SettingRow("SOS contacts", "Add up to 2 people we alert if you press SOS") {
@@ -271,7 +271,7 @@ fun SafetyScreen(onBack: () -> Unit, onSupport: () -> Unit) {
             }
             SwitchRow("Share my trip", "Send live trip details to a trusted contact", shareTrip) { shareTrip = it }
         }
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(4.dp))
 
         InfoCard {
             Text("In an emergency", color = PuInk, fontSize = 16.sp, fontWeight = FontWeight.Bold)
@@ -450,7 +450,7 @@ fun RatingsScreen(onBack: () -> Unit) {
             Text("★ $rating", color = PuInk, fontSize = 40.sp, fontWeight = FontWeight.Bold)
             Text("Based on the last 25 reviews", color = PuMuted, fontSize = 14.sp)
         }
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(4.dp))
 
         InfoCard {
             Text("Car checks from riders", color = PuInk, fontSize = 16.sp, fontWeight = FontWeight.Bold)
@@ -465,7 +465,7 @@ fun RatingsScreen(onBack: () -> Unit) {
                 color = PuMuted, fontSize = 12.sp
             )
         }
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(4.dp))
 
         Spacer(Modifier.height(4.dp))
 
@@ -499,7 +499,7 @@ fun RatingsScreen(onBack: () -> Unit) {
                     }
                 }
             }
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(4.dp))
         }
     }
 
