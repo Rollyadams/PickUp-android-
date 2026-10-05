@@ -215,7 +215,7 @@ private fun DocCard(
             }
         }
     }
-    Spacer(Modifier.height(12.dp))
+    Spacer(Modifier.height(4.dp))
 }
 
 @Composable
@@ -378,7 +378,7 @@ fun OnboardingScreen(onSubmitted: () -> Unit) {
                                 Pill("Not allowed yet", PuChip, PuMuted)
                             }
                         }
-                        Spacer(Modifier.height(12.dp))
+                        Spacer(Modifier.height(4.dp))
                         if (!locationOk) {
                             OutlineButton("Allow all the time", { requestLocation() })
                             TextButton(onClick = { openAppSettings(context) }) {
@@ -400,7 +400,7 @@ fun OnboardingScreen(onSubmitted: () -> Unit) {
                             MoneyRow("Documents and photos", "$docCount of 9")
                             MoneyRow("Location", "On all the time")
                         }
-                        Spacer(Modifier.height(12.dp))
+                        Spacer(Modifier.height(4.dp))
                         ConsentRow("I agree to the Terms and Privacy Policy.", agreed) { agreed = it }
                         Text(
                             "Trip records are kept for safety and may be shared with the authorities when the law requires it.",
@@ -499,7 +499,7 @@ fun VerificationPendingScreen(onDemoContinue: () -> Unit) {
                 StatusRow("Identity and licence check", "In progress", 1)
                 StatusRow("Car and photos check", "Waiting", 2)
             }
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(4.dp))
             Text(
                 "You can't go online until you are approved. This keeps riders and drivers safe.",
                 color = PuMuted, fontSize = 13.sp
@@ -562,7 +562,7 @@ fun ProfileScreen(onBack: () -> Unit) {
                     Pill("Verified ✓", PuGood, Color.White)
                 }
             }
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(4.dp))
 
             InfoCard {
                 Text("Documents", color = PuInk, fontSize = 16.sp, fontWeight = FontWeight.Bold)
@@ -577,7 +577,7 @@ fun ProfileScreen(onBack: () -> Unit) {
                     color = PuMuted, fontSize = 12.sp
                 )
             }
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(4.dp))
 
             InfoCard {
                 Text("Your car", color = PuInk, fontSize = 16.sp, fontWeight = FontWeight.Bold)
@@ -587,7 +587,7 @@ fun ProfileScreen(onBack: () -> Unit) {
                 MoneyRow("Number plate", "ABC-123DE")
                 MoneyRow("Air conditioner", "Working")
             }
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(4.dp))
 
             Spacer(Modifier.height(16.dp))
             OutlineButton("Update a document", { showUpdate = true })
