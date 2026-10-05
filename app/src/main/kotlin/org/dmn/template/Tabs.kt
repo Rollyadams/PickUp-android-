@@ -118,7 +118,7 @@ fun PerformanceScreen(onMenu: () -> Unit, onReviews: () -> Unit) {
                 Spacer(Modifier.height(12.dp))
                 OutlineButton("See reviews", onReviews)
             }
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(4.dp))
 
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 StatTile("${stats.acceptance}%", "Acceptance rate", Modifier.weight(1f))
