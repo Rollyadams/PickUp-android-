@@ -7,6 +7,7 @@ import android.os.Build
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -168,12 +169,15 @@ fun Pill(text: String, bg: Color, fg: Color, fontSize: TextUnit = 12.sp) {
 
 @Composable
 fun InfoCard(content: @Composable ColumnScope.() -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = PuCard)
-    ) {
-        Column(modifier = Modifier.padding(16.dp), content = content)
+    // Flat section with a thin line underneath, instead of a floating rounded card.
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(vertical = 10.dp), content = content)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(1.dp)
+                .background(PuLine)
+        )
     }
 }
 
@@ -329,9 +333,8 @@ fun SegmentedToggle(options: List<String>, selected: Int, onSelect: (Int) -> Uni
 fun StatTile(value: String, label: String, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier
-            .clip(RoundedCornerShape(14.dp))
-            .background(PuCard)
-            .padding(14.dp)
+            .border(1.dp, PuLine, RoundedCornerShape(8.dp))
+            .padding(horizontal = 12.dp, vertical = 8.dp)
     ) {
         Text(value, color = PuInk, fontSize = 20.sp, fontWeight = FontWeight.Bold)
         Text(label, color = PuMuted, fontSize = 12.sp)
