@@ -240,7 +240,7 @@ fun PickupNavigationScreen(
                     Text(naira(request.fare), color = PuInk, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 }
             }
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(4.dp))
 
             MapPlaceholder(Modifier.weight(1f)) {
                 if (arrived) {
@@ -527,7 +527,7 @@ fun TripInProgressScreen(request: RideRequest, onEndTrip: () -> Unit) {
                 Spacer(Modifier.height(8.dp))
                 AddressRow("B", Color(0xFF1FA463), current.dropoff, PuInk, 16.sp, true)
             }
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(4.dp))
 
             MapPlaceholder(Modifier.weight(1f)) {
                 NavigateButton(
@@ -757,7 +757,7 @@ fun TripCompleteScreen(request: RideRequest, onDone: () -> Unit) {
                         Text("$km km · ${request.riderName}", color = PuMuted, fontSize = 13.sp)
                     }
                 }
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(4.dp))
 
                 InfoCard {
                     ReceiptRow("Fare", naira(request.fare))
@@ -774,7 +774,7 @@ fun TripCompleteScreen(request: RideRequest, onDone: () -> Unit) {
                     Spacer(Modifier.height(6.dp))
                     ReceiptRow("You receive", naira(request.fare), strong = true)
                 }
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(4.dp))
                 Text("VAT is taken from your wallet, not from your fare.", color = PuMuted, fontSize = 12.sp)
                 Spacer(Modifier.height(16.dp))
 
@@ -840,7 +840,7 @@ fun TripCompleteScreen(request: RideRequest, onDone: () -> Unit) {
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(4.dp))
             }
 
             Text(
