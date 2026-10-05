@@ -306,7 +306,7 @@ fun RequestDetailScreen(request: RideRequest, onBack: () -> Unit, onAccepted: ()
                 Spacer(Modifier.height(8.dp))
                 AddressRow("B", Color(0xFF1FA463), request.dropoff)
             }
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(4.dp))
 
             MapPlaceholder(Modifier.weight(1f))
 
