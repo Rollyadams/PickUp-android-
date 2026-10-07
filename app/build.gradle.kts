@@ -15,3 +15,7 @@ android {
                 versionName = "0.1.$buildNumber"
         }
 }
+
+dependencies {
+        implementation(project(":core"))
+}
