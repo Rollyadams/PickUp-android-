@@ -1,17 +1,38 @@
 package org.dmn.template.rider
 
+import android.location.Location
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import org.dmn.template.roundTo100
-import kotlin.math.abs
+
+/** Where the rider's login is remembered. The app root reads these to keep both modes in step. */
+const val RIDER_PREFS = "rider_prefs"
+const val RIDER_LOGGED_IN = "logged_in"
 
 const val CASH = "Cash"
 const val BANK = "Bank Transfer"
 
-/** A landmark the rider can pick. [km] is a demo position, only used to fake distances. */
-data class Place(val name: String, val area: String, val km: Double)
+/** A rider can add stops after the destination, up to this many in total. */
+const val MAX_STOPS = 3
+
+/** Notifications shown as unread in the menu (demo). */
+const val RIDER_UNREAD = 2
+
+// PLACEHOLDER: lowest fare Pick Up will ever accept for any trip.
+const val MIN_FARE_FLOOR = 1000
+
+data class Place(val name: String, val area: String, val lat: Double, val lng: Double)
+
+data class RideType(
+    val id: Int,
+    val name: String,
+    val glyph: String,
+    val note: String,
+    val etaMinutes: Int
+)
 
 data class DriverOffer(
     val name: String,
@@ -33,10 +54,29 @@ data class PastTrip(
     val driver: String
 )
 
+/** Straight-line distance stretched by 35% to guess the road distance, until real routing is added. */
+fun roadKm(a: Place, b: Place): Double {
+    val out = FloatArray(1)
+    Location.distanceBetween(a.lat, a.lng, b.lat, b.lng, out)
+    return maxOf(1.0, out[0] / 1000.0 * 1.35)
+}
+
 /** Everything the rider has chosen for the ride in progress. */
 class RideDraft {
-    var pickup by mutableStateOf(RiderDemo.places[0])
-    var dropoff by mutableStateOf<Place?>(null)
+    var pickup by mutableStateOf<Place?>(null)
+
+    /** True when the rider picked the pickup by hand instead of using the detected location. */
+    var pickupIsManual by mutableStateOf(false)
+
+    /** Destination first, then any extra stops. */
+    val stops = mutableStateListOf<Place>()
+
+    /** What the search screen is editing: 0 = pickup, 1 = a stop. */
+    var searchTarget by mutableIntStateOf(1)
+    var searchStopIndex by mutableIntStateOf(0)
+
+    var rideType by mutableIntStateOf(0)
+    var autoAccept by mutableStateOf(false)
     var fare by mutableIntStateOf(0)
     var payment by mutableStateOf(CASH)
     var childSeat by mutableStateOf(false)
@@ -45,13 +85,26 @@ class RideDraft {
     var driver by mutableStateOf<DriverOffer?>(null)
     var rating by mutableIntStateOf(0)
 
-    val km: Double
-        get() = dropoff?.let { RiderDemo.distanceKm(pickup, it) } ?: 0.0
+    val destination: Place?
+        get() = stops.lastOrNull()
 
-    /** Clears the trip but keeps the rider's chosen payment method. */
+    /** Distance from the pickup through every stop. */
+    val km: Double
+        get() {
+            var from = pickup ?: return 0.0
+            var total = 0.0
+            for (stop in stops) {
+                total += roadKm(from, stop)
+                from = stop
+            }
+            return total
+        }
+
+    /** Clears the trip but keeps the pickup, ride type and payment method. */
     fun reset() {
-        dropoff = null
+        stops.clear()
         fare = 0
+        autoAccept = false
         childSeat = false
         extraPassengers = false
         comment = ""
@@ -63,28 +116,41 @@ class RideDraft {
 /** Demo data until the real backend exists. */
 object RiderDemo {
     val places = listOf(
-        Place("Yaba Tech Gate", "Yaba", 0.0),
-        Place("Surulere Shoprite", "Surulere", 4.5),
-        Place("Ojuelegba Bus Stop", "Surulere", 3.0),
-        Place("Allen Avenue", "Ikeja", 9.4),
-        Place("Ikeja City Mall", "Alausa, Ikeja", 12.0),
-        Place("Murtala Muhammed Airport", "Ikeja", 15.5),
-        Place("National Theatre", "Iganmu", 8.0),
-        Place("Lekki Phase 1 Gate", "Lekki", 22.0)
+        Place("Yaba Tech Gate", "Yaba", 6.5170, 3.3715),
+        Place("Ojuelegba Bus Stop", "Surulere", 6.5064, 3.3667),
+        Place("Surulere Shoprite", "Surulere", 6.4989, 3.3563),
+        Place("Allen Avenue", "Ikeja", 6.6018, 3.3515),
+        Place("Ikeja City Mall", "Alausa, Ikeja", 6.6130, 3.3553),
+        Place("Murtala Muhammed Airport", "Ikeja", 6.5774, 3.3212),
+        Place("National Theatre", "Iganmu", 6.4772, 3.3656),
+        Place("Lekki Phase 1 Gate", "Lekki", 6.4474, 3.4700)
     )
 
-    fun distanceKm(a: Place, b: Place): Double = maxOf(2.0, abs(a.km - b.km))
+    val rideTypes = listOf(
+        RideType(0, "Ride", "🚗", "Everyday fares", 4),
+        RideType(1, "Comfort", "🚙", "Newer cars", 6),
+        RideType(2, "Quick Accept", "⚡", "In a hurry? Skip the offers", 3)
+    )
 
-    // PLACEHOLDER fare rules until real pricing is decided.
-    fun recommendedFare(km: Double): Int = roundTo100(500 + (km * 420).toInt())
-    fun minFare(recommended: Int): Int = roundTo100(recommended * 80 / 100)
-    fun maxFare(recommended: Int): Int = roundTo100(recommended * 150 / 100)
-    fun quickFare(recommended: Int): Int = roundTo100(recommended * 115 / 100)
+    // PLACEHOLDER fare rules until real pricing is decided. The rider cannot go below the minimum.
+    private fun algorithmFare(km: Double): Int = roundTo100(500 + (km * 420).toInt())
+
+    fun recommendedFare(km: Double): Int = maxOf(MIN_FARE_FLOOR, algorithmFare(km))
+
+    fun minimumFare(km: Double): Int =
+        maxOf(MIN_FARE_FLOOR, roundTo100(algorithmFare(km) * 85 / 100))
+
+    /** Price for each ride type. Never below the recommended fare, so never below the minimum. */
+    fun fareFor(typeId: Int, recommended: Int): Int = when (typeId) {
+        1 -> roundTo100(recommended * 130 / 100)
+        2 -> roundTo100(recommended * 115 / 100)
+        else -> recommended
+    }
 
     fun offersFor(fare: Int): List<DriverOffer> = listOf(
-        DriverOffer("Emeka", 4.92, 214, "Toyota Corolla, grey", "LND-412-XA", 3, fare),
-        DriverOffer("Sade", 4.85, 131, "Honda Accord, black", "KJA-209-GH", 5, roundTo100(fare * 108 / 100)),
-        DriverOffer("Ibrahim", 4.78, 96, "Kia Rio, white", "ABC-317-FK", 7, roundTo100(fare * 115 / 100))
+        DriverOffer("Emeka", 4.92, 214, "Toyota Corolla", "LND-412-XA", 8, fare),
+        DriverOffer("Sade", 4.85, 131, "Honda Accord", "KJA-209-GH", 12, roundTo100(fare * 108 / 100)),
+        DriverOffer("Ibrahim", 4.78, 96, "Kia Rio", "ABC-317-FK", 17, roundTo100(fare * 115 / 100))
     )
 
     val trips = listOf(
