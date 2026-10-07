@@ -27,3 +27,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "AndroidTemplate"
 include(":app")
+include(":core")
+include(":rider")
