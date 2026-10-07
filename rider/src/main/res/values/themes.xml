@@ -1,0 +1,3 @@
+<resources>
+    <style name="Theme.PickUpRider" parent="Theme.MaterialComponents.DayNight.NoActionBar" />
+</resources>
