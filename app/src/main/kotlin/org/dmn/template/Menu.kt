@@ -46,6 +46,7 @@ private val menuEntries = listOf(
 fun DriverDrawer(
     unread: Int,
     onNavigate: (String) -> Unit,
+    onSwitchMode: () -> Unit,
     onLogout: () -> Unit
 ) {
     val rating = DriverRepository.performance(1).rating
@@ -108,6 +109,15 @@ fun DriverDrawer(
             }
 
             Spacer(Modifier.weight(1f))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(PuLine)
+            )
+            Box(modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
+                PrimaryButton("Passenger mode", onSwitchMode)
+            }
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
