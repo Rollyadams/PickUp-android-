@@ -11,8 +11,8 @@ android {
 }
 
 dependencies {
-        implementation(platform(libs.androidx.compose.bom))
-        implementation(libs.androidx.compose.ui)
-        implementation(libs.androidx.compose.ui.graphics)
-        implementation(libs.androidx.compose.material3)
+        implementation(platform(libs.findLibrary("androidx.compose.bom").get()))
+        implementation(libs.findLibrary("androidx.compose.ui").get())
+        implementation(libs.findLibrary("androidx.compose.ui.graphics").get())
+        implementation(libs.findLibrary("androidx.compose.material3").get())
 }
