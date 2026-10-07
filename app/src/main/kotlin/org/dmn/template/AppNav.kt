@@ -46,8 +46,13 @@ private val idArgs = listOf(navArgument("id") { type = NavType.StringType })
 private fun NavBackStackEntry.requestOrNull(): RideRequest? =
     arguments?.getString("id")?.let { DriverRepository.request(it) }
 
+/**
+ * The driver side of the single Pick Up app.
+ * [onSwitchToRider] is called from the "Passenger mode" button; [onLoggedOut] lets the app root
+ * sign the rider side out too.
+ */
 @Composable
-fun PickUpNav() {
+fun PickUpNav(onSwitchToRider: () -> Unit, onLoggedOut: () -> Unit) {
     val navController = rememberNavController()
     var online by rememberSaveable { mutableStateOf(false) }
 
@@ -131,6 +136,7 @@ fun PickUpNav() {
                 scope.launch { drawerState.close() }
                 online = false
                 saveStage(0)
+                onLoggedOut()
                 navController.navigate("phone") {
                     popUpTo("home") { inclusive = true }
                 }
@@ -155,6 +161,11 @@ fun PickUpNav() {
                             } else {
                                 navController.navigate(route) { launchSingleTop = true }
                             }
+                        },
+                        onSwitchMode = {
+                            scope.launch { drawerState.close() }
+                            online = false
+                            onSwitchToRider()
                         },
                         onLogout = logout
                     )
