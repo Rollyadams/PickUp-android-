@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -23,6 +25,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.dmn.template.OutlineButton
@@ -41,7 +44,7 @@ import org.dmn.template.naira
 private val dateFilters = listOf("All time", "This week", "This month")
 private val paymentFilters = listOf("All", CASH, BANK)
 
-/** Past rides. Filters: date range and payment method (no city/delivery split, cars only). */
+/** Past rides. Filters: date range and payment method (cars only, so no city/delivery split). */
 @Composable
 fun RiderHistoryScreen(onBack: () -> Unit) {
     var dateFilter by remember { mutableIntStateOf(0) }
@@ -82,10 +85,14 @@ fun RiderHistoryScreen(onBack: () -> Unit) {
                     Column(modifier = Modifier.padding(vertical = 10.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(trip.date, color = PuMuted, fontSize = 13.sp)
+                            Text(
+                                trip.date,
+                                color = PuMuted,
+                                fontSize = 13.sp,
+                                modifier = Modifier.weight(1f)
+                            )
                             Pill(trip.payment, PuChip, PuInk, 11.sp)
                         }
                         Text(
@@ -97,9 +104,14 @@ fun RiderHistoryScreen(onBack: () -> Unit) {
                         )
                         Row(
                             modifier = Modifier.fillMaxWidth().padding(top = 2.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text("Driver ${trip.driver}", color = PuMuted, fontSize = 13.sp)
+                            Text(
+                                "Driver ${trip.driver}",
+                                color = PuMuted,
+                                fontSize = 13.sp,
+                                modifier = Modifier.weight(1f)
+                            )
                             Text(
                                 naira(trip.fare),
                                 color = PuInk,
@@ -115,9 +127,9 @@ fun RiderHistoryScreen(onBack: () -> Unit) {
     }
 }
 
-/** Profile and the few settings a rider has. */
+/** The rider's profile, opened from the menu header. */
 @Composable
-fun RiderProfileScreen(draft: RideDraft, phone: String, onBack: () -> Unit, onLogout: () -> Unit) {
+fun RiderProfileScreen(phone: String, onBack: () -> Unit) {
     var dialog by remember { mutableStateOf<String?>(null) }
 
     Surface(modifier = Modifier.fillMaxSize(), color = PuBg) {
@@ -127,20 +139,40 @@ fun RiderProfileScreen(draft: RideDraft, phone: String, onBack: () -> Unit, onLo
                 .systemBarsPadding()
                 .padding(horizontal = 20.dp)
         ) {
-            TopBar("Profile and settings", onBack)
+            TopBar("Profile", onBack)
             Row(
                 modifier = Modifier.padding(vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 RiderAvatar("Rider", 56.dp)
                 Spacer(Modifier.width(14.dp))
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text("Rider", color = PuInk, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                     Text(phone.ifEmpty { "No number yet" }, color = PuMuted, fontSize = 14.sp)
                 }
             }
             HairLine()
-            Spacer(Modifier.height(12.dp))
+            ValueRow("Name", "Add") { dialog = "Editing your name comes later." }
+            ValueRow("Photo", "Add") { dialog = "Profile photos come later." }
+        }
+    }
+
+    dialog?.let { message -> SkeletonDialog(message) { dialog = null } }
+}
+
+/** Few settings for now: default payment, emergency contact and signing out. */
+@Composable
+fun RiderSettingsScreen(draft: RideDraft, onBack: () -> Unit, onLogout: () -> Unit) {
+    var dialog by remember { mutableStateOf<String?>(null) }
+
+    Surface(modifier = Modifier.fillMaxSize(), color = PuBg) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .systemBarsPadding()
+                .padding(horizontal = 20.dp)
+        ) {
+            TopBar("Settings", onBack)
             Text("Default payment", color = PuMuted, fontSize = 13.sp)
             Spacer(Modifier.height(6.dp))
             SegmentedToggle(listOf(CASH, BANK), if (draft.payment == BANK) 1 else 0) { index ->
@@ -148,7 +180,6 @@ fun RiderProfileScreen(draft: RideDraft, phone: String, onBack: () -> Unit, onLo
             }
             Spacer(Modifier.height(8.dp))
             ValueRow("Emergency contact", "Add") { dialog = "Emergency contacts come later." }
-            ValueRow("Help and support", "") { dialog = "Help and support come later." }
             Spacer(Modifier.weight(1f))
             OutlineButton("Sign out", onLogout, color = PuDanger)
             Spacer(Modifier.height(8.dp))
@@ -159,3 +190,61 @@ fun RiderProfileScreen(draft: RideDraft, phone: String, onBack: () -> Unit, onLo
 
     dialog?.let { message -> SkeletonDialog(message) { dialog = null } }
 }
+
+/** A title with short entries under it. Used for Notifications, Safety, Help and Support. */
+@Composable
+fun RiderInfoScreen(title: String, entries: List<Pair<String, String>>, onBack: () -> Unit) {
+    Surface(modifier = Modifier.fillMaxSize(), color = PuBg) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .systemBarsPadding()
+                .padding(horizontal = 20.dp)
+        ) {
+            TopBar(title, onBack)
+            Column(modifier = Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+                entries.forEach { (heading, body) ->
+                    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp)) {
+                        Text(
+                            heading,
+                            color = PuInk,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            body,
+                            color = PuMuted,
+                            fontSize = 14.sp,
+                            modifier = Modifier.padding(top = 2.dp)
+                        )
+                    }
+                    HairLine()
+                }
+            }
+        }
+    }
+}
+
+val notificationEntries = listOf(
+    "Welcome to Pick Up" to "Tell us where you are going and drivers nearby will answer.",
+    "Safety tip" to "Share your trip with someone you trust before you set off."
+)
+
+val safetyEntries = listOf(
+    "Verified drivers" to "Every driver's ID and licence is checked before they can drive.",
+    "SOS button" to "During a trip, tap SOS to alert Pick Up support and your emergency contact.",
+    "Share your trip" to "Send your live trip to someone on WhatsApp from the trip screen."
+)
+
+val helpEntries = listOf(
+    "How are fares set?" to "Pick Up recommends a fare for your trip. Drivers accept it or counter, and you choose.",
+    "What is Quick Accept?" to "A higher fixed price that skips the offers, so a driver is assigned straight away.",
+    "Can I pay by bank transfer?" to "Yes. Choose it before you book and the driver's details show at the end of the trip."
+)
+
+val supportEntries = listOf(
+    "Report a problem" to "A monitored support line is coming. Serious reports will never go unanswered.",
+    "Lost something?" to "Contact support with your trip details. In-app support comes later."
+)
