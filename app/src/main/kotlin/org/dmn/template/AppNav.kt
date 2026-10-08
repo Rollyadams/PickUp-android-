@@ -48,7 +48,7 @@ private fun NavBackStackEntry.requestOrNull(): RideRequest? =
 
 /**
  * The driver side of the single Pick Up app.
- * [onSwitchToRider] is called from the "Passenger mode" button; [onLoggedOut] lets the app root
+ * [onSwitchToRider] is called from the "Rider app" button; [onLoggedOut] lets the app root
  * sign the rider side out too.
  */
 @Composable
