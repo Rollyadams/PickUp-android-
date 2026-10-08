@@ -1,6 +1,8 @@
 package org.dmn.template
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -33,14 +35,19 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -132,6 +139,8 @@ fun DriverHomeScreen(
 ) {
     // Nearest pickup first. With live data this list refreshes as requests change.
     val requests = remember { DriverRepository.requests().sortedBy { it.etaMinutes } }
+    // Rides the driver swiped away stay out of the list until the rider changes the fare or destination.
+    val visible = requests.filter { !DriverRepository.isHidden(it) }
 
     val locationOk = rememberAlwaysLocationGranted()
     val requestLocation = rememberLocationRequester()
@@ -159,7 +168,7 @@ fun DriverHomeScreen(
                         color = PuInk, fontSize = 20.sp, fontWeight = FontWeight.Bold
                     )
                     Text(
-                        if (online) "${requests.size} ride requests · nearest first"
+                        if (online) "${visible.size} ride requests · nearest first"
                         else "Go online to accept rides",
                         color = PuMuted, fontSize = 13.sp
                     )
@@ -179,12 +188,22 @@ fun DriverHomeScreen(
                 )
             }
 
+            if (visible.isEmpty()) {
+                Text(
+                    "No rides to show. A hidden ride comes back if the rider changes the fare or destination.",
+                    color = PuMuted,
+                    fontSize = 14.sp,
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)
+                )
+            }
             LazyColumn(
                 modifier = Modifier.fillMaxWidth().weight(1f),
                 contentPadding = PaddingValues(vertical = 0.dp)
             ) {
-                items(requests) { request ->
-                    RequestCard(request) { onOpenRequest(request.id) }
+                items(visible, key = { it.id }) { request ->
+                    SwipeToHide(onHide = { DriverRepository.hide(request) }) {
+                        RequestCard(request) { onOpenRequest(request.id) }
+                    }
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -206,6 +225,49 @@ fun DriverHomeScreen(
             onAllow = { requestLocation() },
             onDismiss = { showLocationDialog = false }
         )
+    }
+}
+
+/** Drag a row to the right to hide it. Let go early and it springs back. */
+@Composable
+private fun SwipeToHide(onHide: () -> Unit, content: @Composable () -> Unit) {
+    var offsetX by remember { mutableFloatStateOf(0f) }
+    var widthPx by remember { mutableIntStateOf(1) }
+
+    Box(modifier = Modifier.fillMaxWidth().onSizeChanged { widthPx = it.width }) {
+        if (offsetX > 0f) {
+            Box(
+                modifier = Modifier.matchParentSize().background(PuChip),
+                contentAlignment = Alignment.CenterStart
+            ) {
+                Text(
+                    "Hide",
+                    color = PuMuted,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(start = 20.dp)
+                )
+            }
+        }
+        Box(
+            modifier = Modifier
+                .offset { IntOffset(offsetX.toInt(), 0) }
+                .background(PuBg)
+                .pointerInput(Unit) {
+                    detectHorizontalDragGestures(
+                        onDragEnd = {
+                            if (offsetX > widthPx * 0.35f) onHide() else offsetX = 0f
+                        },
+                        onDragCancel = { offsetX = 0f },
+                        onHorizontalDrag = { change, dragAmount ->
+                            change.consume()
+                            offsetX = (offsetX + dragAmount).coerceAtLeast(0f)
+                        }
+                    )
+                }
+        ) {
+            content()
+        }
     }
 }
 
