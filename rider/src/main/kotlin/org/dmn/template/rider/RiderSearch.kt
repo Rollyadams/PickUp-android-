@@ -185,7 +185,7 @@ fun RiderSearchScreen(draft: RideDraft, onClose: () -> Unit, onPicked: () -> Uni
                 }
             }
             FieldBlock(
-                label = "From",
+                label = "Pickup",
                 value = pickupText,
                 placeholder = from?.name ?: "Your pickup",
                 active = active == 0,
@@ -195,9 +195,9 @@ fun RiderSearchScreen(draft: RideDraft, onClose: () -> Unit, onPicked: () -> Uni
             )
             Spacer(Modifier.height(8.dp))
             FieldBlock(
-                label = "To",
+                label = "Destination",
                 value = stopText,
-                placeholder = "Where to?",
+                placeholder = "Where are you headed?",
                 active = active == 1,
                 focus = focus,
                 onValue = { stopText = it },
@@ -249,8 +249,13 @@ fun RiderSearchScreen(draft: RideDraft, onClose: () -> Unit, onPicked: () -> Uni
                                 Spacer(Modifier.width(10.dp))
                                 Text(
                                     "%.1f km".format(roadKm(from, place)),
-                                    color = PuMuted,
-                                    fontSize = 14.sp
+                                    color = PuInk,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(50))
+                                        .background(PuChip)
+                                        .padding(horizontal = 10.dp, vertical = 4.dp)
                                 )
                             }
                         }
