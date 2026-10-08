@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -46,6 +47,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -192,16 +194,22 @@ private fun RideTypeRow(type: RideType, fare: Int, selected: Boolean, onClick: (
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 3.dp)
-            .clip(RoundedCornerShape(14.dp))
-            .background(if (selected) PuChip else PuCard)
-            .border(1.dp, if (selected) PuAmber else PuCard, RoundedCornerShape(14.dp))
+            .clip(RoundedCornerShape(12.dp))
+            .background(if (selected) PuChip else PuBg)
             .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
+            .padding(end = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        Box(
+            modifier = Modifier
+                .width(5.dp)
+                .height(64.dp)
+                .background(if (selected) PuAmber else Color.Transparent)
+        )
+        Spacer(Modifier.width(10.dp))
         Text(type.glyph, fontSize = 28.sp)
         Spacer(Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f)) {
+        Column(modifier = Modifier.weight(1f).padding(vertical = 10.dp)) {
             Text(type.name, color = PuInk, fontSize = 16.sp, fontWeight = FontWeight.Bold)
             Text("4 seats · ${type.etaMinutes} min", color = PuMuted, fontSize = 13.sp)
             Text(type.note, color = PuMuted, fontSize = 13.sp)
@@ -209,6 +217,22 @@ private fun RideTypeRow(type: RideType, fare: Int, selected: Boolean, onClick: (
         Spacer(Modifier.width(8.dp))
         Text(naira(fare), color = PuInk, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
     }
+}
+
+@Composable
+private fun ChipButton(text: String, onClick: () -> Unit) {
+    Text(
+        text,
+        color = PuInk,
+        fontSize = 14.sp,
+        fontWeight = FontWeight.Bold,
+        maxLines = 1,
+        modifier = Modifier
+            .clip(RoundedCornerShape(50))
+            .background(PuChip)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 10.dp)
+    )
 }
 
 /**
@@ -395,23 +419,23 @@ fun RiderFareScreen(
                 }
 
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 8.dp, bottom = 12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    IconBox(if (draft.payment == BANK) "🏦" else "💵") { showPayment = true }
-                    AmberButton(
-                        text = if (selected.id == 2) "Quick Accept · ${naira(fare)}" else "Find drivers · ${naira(fare)}",
-                        onClick = {
-                            draft.fare = fare
-                            if (selected.id == 2) onQuickAccept() else onFind()
-                        },
-                        modifier = Modifier.weight(1f)
-                    )
-                    IconBox("⚙") { showOptions = true }
+                    ChipButton(if (draft.payment == BANK) "🏦 Bank transfer" else "💵 Cash") {
+                        showPayment = true
+                    }
+                    ChipButton("⚙ Options") { showOptions = true }
                 }
+                AmberButton(
+                    text = if (selected.id == 2) "Quick Accept · ${naira(fare)}" else "Find drivers · ${naira(fare)}",
+                    onClick = {
+                        draft.fare = fare
+                        if (selected.id == 2) onQuickAccept() else onFind()
+                    },
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 12.dp)
+                )
             }
         }
     }
@@ -421,22 +445,10 @@ fun RiderFareScreen(
 }
 
 @Composable
-private fun OfferRow(offer: DriverOffer, yourFare: Boolean, onDecline: () -> Unit, onAccept: () -> Unit) {
+private fun OfferRow(offer: DriverOffer, matchesPrice: Boolean, onDecline: () -> Unit, onAccept: () -> Unit) {
     Column(modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp)) {
-        Row(verticalAlignment = Alignment.Bottom) {
-            Text(naira(offer.fare), color = PuInk, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
-            Spacer(Modifier.width(10.dp))
-            Text("${offer.etaMinutes} min", color = PuMuted, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-        }
-        if (yourFare) {
-            Spacer(Modifier.height(4.dp))
-            Pill("Your fare", Color(0x331FA463), PuGood, 12.sp)
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            RiderAvatar(offer.name, 44.dp)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            RiderAvatar(offer.name, 48.dp)
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -454,6 +466,19 @@ private fun OfferRow(offer: DriverOffer, yourFare: Boolean, onDecline: () -> Uni
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
+                Text(
+                    "${offer.etaMinutes} min away",
+                    color = PuMuted,
+                    fontSize = 13.sp
+                )
+            }
+            Spacer(Modifier.width(8.dp))
+            Column(horizontalAlignment = Alignment.End) {
+                Text(naira(offer.fare), color = PuInk, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold)
+                if (matchesPrice) {
+                    Spacer(Modifier.height(4.dp))
+                    Pill("Matches your price", Color(0x331FA463), PuGood, 11.sp)
+                }
             }
         }
         Row(
@@ -467,17 +492,26 @@ private fun OfferRow(offer: DriverOffer, yourFare: Boolean, onDecline: () -> Uni
     HairLine()
 }
 
-/** Waiting for drivers, then the offers. The rider chooses; nothing is assigned without a choice. */
+/**
+ * Looking for drivers, then the offers. The rider chooses; nothing is assigned without a choice.
+ * The rider can type a new price, but never one below the minimum for the trip.
+ */
 @Composable
 fun RiderFindingScreen(draft: RideDraft, onAccept: (DriverOffer) -> Unit, onCancel: () -> Unit) {
     val offers = remember { mutableStateListOf<DriverOffer>() }
     var secondsLeft by remember { mutableIntStateOf(60) }
+    var round by remember { mutableIntStateOf(0) }
+    var changingPrice by remember { mutableStateOf(false) }
+    var fareText by remember { mutableStateOf(draft.fare.toString()) }
     val viewing = 11
+    val minimum = RiderDemo.minimumFare(draft.km)
+    val typed = fareText.toIntOrNull()
+    val fareOk = typed != null && typed >= minimum
 
     BackHandler { }
 
-    // Demo: offers arrive one by one.
-    LaunchedEffect(Unit) {
+    // Demo: offers arrive one by one. A new price starts the search again.
+    LaunchedEffect(round) {
         for (offer in RiderDemo.offersFor(draft.fare)) {
             delay(2500)
             offers.add(offer)
@@ -487,7 +521,7 @@ fun RiderFindingScreen(draft: RideDraft, onAccept: (DriverOffer) -> Unit, onCanc
             }
         }
     }
-    LaunchedEffect(Unit) {
+    LaunchedEffect(round) {
         while (secondsLeft > 0) {
             delay(1000)
             secondsLeft--
@@ -499,30 +533,13 @@ fun RiderFindingScreen(draft: RideDraft, onAccept: (DriverOffer) -> Unit, onCanc
             modifier = Modifier
                 .fillMaxSize()
                 .systemBarsPadding()
+                .imePadding()
                 .padding(horizontal = 20.dp)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    "✕  Cancel request",
-                    color = PuDanger,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(50))
-                        .background(Color(0x22E5484D))
-                        .clickable(onClick = onCancel)
-                        .padding(horizontal = 16.dp, vertical = 10.dp)
-                )
-                Spacer(Modifier.weight(1f))
-                Text("✔ Verified drivers", color = PuGood, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-            }
             Spacer(Modifier.height(16.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    if (offers.isEmpty()) "Waiting for responses" else "${offers.size} offers",
+                    if (offers.isEmpty()) "Looking for drivers" else "${offers.size} offers",
                     color = PuInk,
                     fontSize = 22.sp,
                     fontWeight = FontWeight.Bold,
@@ -530,7 +547,15 @@ fun RiderFindingScreen(draft: RideDraft, onAccept: (DriverOffer) -> Unit, onCanc
                 )
                 Text(mmss(secondsLeft), color = PuInk, fontSize = 22.sp, fontWeight = FontWeight.Bold)
             }
-            Text("You choose your driver", color = PuMuted, fontSize = 14.sp)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "Pick the driver you like",
+                    color = PuMuted,
+                    fontSize = 14.sp,
+                    modifier = Modifier.weight(1f)
+                )
+                Text("✔ Verified drivers", color = PuGood, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            }
             Spacer(Modifier.height(8.dp))
             Box(
                 modifier = Modifier
@@ -544,10 +569,67 @@ fun RiderFindingScreen(draft: RideDraft, onAccept: (DriverOffer) -> Unit, onCanc
                         .fillMaxWidth((secondsLeft / 60f).coerceIn(0f, 1f))
                         .height(6.dp)
                         .clip(RoundedCornerShape(3.dp))
-                        .background(PuInk)
+                        .background(PuAmber)
                 )
             }
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(10.dp))
+
+            // The rider's price, with a box to type a new one.
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "Your price ${naira(draft.fare)}",
+                    color = PuInk,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f)
+                )
+                TextButton(onClick = { changingPrice = !changingPrice }) {
+                    Text(if (changingPrice) "Close" else "Change price", color = PuAmber)
+                }
+            }
+            if (changingPrice) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedTextField(
+                        value = fareText,
+                        onValueChange = { input ->
+                            if (input.length <= 7 && input.all { it.isDigit() }) fareText = input
+                        },
+                        prefix = { Text("₦", color = PuMuted) },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.weight(1f),
+                        colors = fieldColors()
+                    )
+                    AmberButton(
+                        text = "Update",
+                        onClick = {
+                            if (typed != null) {
+                                draft.fare = typed
+                                offers.clear()
+                                secondsLeft = 60
+                                round++
+                                changingPrice = false
+                            }
+                        },
+                        enabled = fareOk
+                    )
+                }
+                Text(
+                    if (fareOk || typed == null) {
+                        "Lowest allowed for this trip: ${naira(minimum)}"
+                    } else {
+                        "Too low. The lowest fare for this trip is ${naira(minimum)}."
+                    },
+                    color = if (fareOk || typed == null) PuMuted else PuDanger,
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
+            Spacer(Modifier.height(8.dp))
 
             if (offers.isEmpty()) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -557,7 +639,7 @@ fun RiderFindingScreen(draft: RideDraft, onAccept: (DriverOffer) -> Unit, onCanc
                     }
                     Spacer(Modifier.width(6.dp))
                     Text(
-                        "$viewing drivers are viewing your request",
+                        "$viewing drivers nearby can see your trip",
                         color = PuInk,
                         fontSize = 14.sp,
                         modifier = Modifier.weight(1f)
@@ -570,7 +652,7 @@ fun RiderFindingScreen(draft: RideDraft, onAccept: (DriverOffer) -> Unit, onCanc
                     offers.toList().forEach { offer ->
                         OfferRow(
                             offer = offer,
-                            yourFare = offer.fare == draft.fare,
+                            matchesPrice = offer.fare == draft.fare,
                             onDecline = { offers.remove(offer) },
                             onAccept = { onAccept(offer) }
                         )
@@ -582,11 +664,11 @@ fun RiderFindingScreen(draft: RideDraft, onAccept: (DriverOffer) -> Unit, onCanc
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { draft.autoAccept = !draft.autoAccept }
-                    .padding(top = 10.dp, bottom = 12.dp),
+                    .padding(top = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    "Your fare ${naira(draft.fare)}. Take the first offer automatically",
+                    "Take the first offer automatically",
                     color = PuInk,
                     fontSize = 14.sp,
                     modifier = Modifier.weight(1f)
@@ -594,6 +676,8 @@ fun RiderFindingScreen(draft: RideDraft, onAccept: (DriverOffer) -> Unit, onCanc
                 Spacer(Modifier.width(8.dp))
                 Switch(checked = draft.autoAccept, onCheckedChange = { draft.autoAccept = it })
             }
+            OutlineButton("Cancel search", onCancel, color = PuDanger)
+            Spacer(Modifier.height(12.dp))
         }
     }
 }
