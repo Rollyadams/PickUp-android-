@@ -1,5 +1,7 @@
 package org.dmn.template
 
+import androidx.compose.runtime.mutableStateMapOf
+
 data class RideRequest(
     val id: String,
     val riderName: String,
@@ -64,6 +66,21 @@ object DriverRepository {
     )
 
     fun requests(): List<RideRequest> = sample
+
+    // Rides the driver swiped away. A hidden ride stays hidden until the rider changes the fare
+    // or the destination. A rebooked ride is a new request, so it appears on its own.
+    private val hidden = mutableStateMapOf<String, String>()
+
+    private fun signature(r: RideRequest): String = "${r.fare}|${r.dropoff}"
+
+    fun hide(r: RideRequest) {
+        hidden[r.id] = signature(r)
+    }
+
+    fun isHidden(r: RideRequest): Boolean {
+        val current = request(r.id) ?: r
+        return hidden[r.id] == signature(current)
+    }
 
     // A trip whose drop-off or fare changed mid-trip. Real data will live on the server.
     private val tripOverrides = mutableMapOf<String, RideRequest>()
