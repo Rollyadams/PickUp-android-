@@ -6,6 +6,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -33,6 +35,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -108,24 +111,35 @@ fun RiderHomeScreen(
                     .weight(1f)
                     .padding(start = 12.dp, end = 12.dp, top = 8.dp)
             ) {
-                // Pin and the bubble above it, kept above the centre so they never sit on the map label.
-                Column(
+                // The pin sits above the centre so it never lands on the map label.
+                Text(
+                    "📍",
+                    fontSize = 40.sp,
                     modifier = Modifier
                         .align(Alignment.Center)
-                        .padding(bottom = 96.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                        .padding(bottom = 64.dp)
+                )
+                // Menu button and the pickup card share the top edge of the map.
+                Row(
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .fillMaxWidth()
+                        .padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
+                    MenuButton(onMenu)
+                    Spacer(Modifier.width(10.dp))
                     Row(
                         modifier = Modifier
-                            .widthIn(max = 260.dp)
-                            .clip(RoundedCornerShape(12.dp))
+                            .weight(1f)
+                            .clip(RoundedCornerShape(14.dp))
                             .background(PuCard)
                             .clickable(onClick = onEditPickup)
                             .padding(horizontal = 14.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column(modifier = Modifier.weight(1f, fill = false)) {
-                            Text("Pickup", color = PuMuted, fontSize = 12.sp)
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Pickup point", color = PuMuted, fontSize = 12.sp)
                             Text(
                                 bubbleText,
                                 color = PuInk,
@@ -138,10 +152,6 @@ fun RiderHomeScreen(
                         Spacer(Modifier.width(8.dp))
                         Text("›", color = PuMuted, fontSize = 20.sp)
                     }
-                    Text("📍", fontSize = 34.sp)
-                }
-                Box(modifier = Modifier.align(Alignment.TopStart).padding(12.dp)) {
-                    MenuButton(onMenu)
                 }
                 // Find me again, for when the detected spot is wrong.
                 Box(
@@ -170,39 +180,6 @@ fun RiderHomeScreen(
                     .padding(horizontal = 20.dp, vertical = 12.dp)
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    RiderDemo.rideTypes.forEach { type ->
-                        val selected = draft.rideType == type.id
-                        Column(
-                            modifier = Modifier
-                                .weight(1f)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(if (selected) PuChip else PuBg)
-                                .border(
-                                    1.dp,
-                                    if (selected) PuAmber else PuChip,
-                                    RoundedCornerShape(12.dp)
-                                )
-                                .clickable { draft.rideType = type.id }
-                                .padding(horizontal = 6.dp, vertical = 10.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(type.glyph, fontSize = 22.sp)
-                            Text(
-                                type.name,
-                                color = PuInk,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                    }
-                }
-                Spacer(Modifier.height(12.dp))
-                Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(14.dp))
@@ -213,7 +190,46 @@ fun RiderHomeScreen(
                 ) {
                     Text("🔍", fontSize = 18.sp)
                     Spacer(Modifier.width(12.dp))
-                    Text("Where to?", color = PuInk, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        "Where are you headed?",
+                        color = PuInk,
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                Spacer(Modifier.height(12.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    RiderDemo.rideTypes.forEach { type ->
+                        val selected = draft.rideType == type.id
+                        Row(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(50))
+                                .background(if (selected) Color(0x33FF8A1E) else PuChip)
+                                .border(
+                                    1.dp,
+                                    if (selected) PuAmber else PuChip,
+                                    RoundedCornerShape(50)
+                                )
+                                .clickable { draft.rideType = type.id }
+                                .padding(horizontal = 14.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(type.glyph, fontSize = 18.sp)
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                type.name,
+                                color = PuInk,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1
+                            )
+                        }
+                    }
                 }
                 Spacer(Modifier.height(8.dp))
                 Text("Build ${appVersion()}", color = PuMuted, fontSize = 11.sp)
