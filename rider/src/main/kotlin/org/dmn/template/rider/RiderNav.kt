@@ -76,7 +76,7 @@ private val riderMenu = listOf(
 
 /**
  * The rider side of the single Pick Up app.
- * [onSwitchToDriver] is called from the "Driver mode" button; [onLoggedOut] lets the app root
+ * [onSwitchToDriver] is called from the "Driver app" button; [onLoggedOut] lets the app root
  * sign the driver side out too.
  */
 @Composable
@@ -391,7 +391,7 @@ private fun RiderDrawer(
             Spacer(Modifier.weight(1f))
             HairLine()
             Box(modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
-                PrimaryButton("Driver mode", onSwitchToDriver)
+                PrimaryButton("Driver app", onSwitchToDriver)
             }
         }
     }
