@@ -116,7 +116,7 @@ fun DriverDrawer(
                     .background(PuLine)
             )
             Box(modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
-                PrimaryButton("Passenger mode", onSwitchMode)
+                PrimaryButton("Rider app", onSwitchMode)
             }
             Box(
                 modifier = Modifier
