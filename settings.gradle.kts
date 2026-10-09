@@ -29,3 +29,4 @@ rootProject.name = "AndroidTemplate"
 include(":app")
 include(":core")
 include(":rider")
+include(":admin")
