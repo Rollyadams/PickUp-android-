@@ -27,7 +27,7 @@ import org.dmn.template.LocalPu
 import org.dmn.template.PuAmber
 import org.dmn.template.PuAmberInk
 
-/** The admin app. Step 1 (driver verification) is the first screen that opens from the home grid. */
+/** The admin app. Steps 1 (drivers) and 2 (riders) open from the home grid so far. */
 @Composable
 fun AdminNav() {
     val navController = rememberNavController()
@@ -85,13 +85,28 @@ fun AdminNav() {
                 ) {
                     composable("home") {
                         AdminHomeScreen(onOpenStep = { step ->
-                            if (step == 1) navController.navigate("drivers")
+                            when (step) {
+                                1 -> navController.navigate("drivers")
+                                2 -> navController.navigate("riders")
+                            }
                         })
                     }
                     composable("drivers") {
                         AdminDriversScreen(
                             onBack = { navController.popBackStack() },
                             onOpen = { id -> navController.navigate("driver/$id") }
+                        )
+                    }
+                    composable("riders") {
+                        AdminRidersScreen(
+                            onBack = { navController.popBackStack() },
+                            onOpen = { id -> navController.navigate("rider/$id") }
+                        )
+                    }
+                    composable("rider/{id}") { entry ->
+                        AdminRiderDetailScreen(
+                            id = entry.arguments?.getString("id") ?: "",
+                            onBack = { navController.popBackStack() }
                         )
                     }
                     composable("driver/{id}") { entry ->
