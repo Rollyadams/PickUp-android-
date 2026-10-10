@@ -25,6 +25,18 @@ data class Rider(
     val phoneVerified: Boolean
 )
 
+/** One editable price or tax setting. [unit] is "₦" or "%". */
+data class PriceSetting(
+    val key: String,
+    val group: String,
+    val label: String,
+    val unit: String,
+    val value: Double,
+    val min: Double,
+    val max: Double,
+    val hint: String
+)
+
 /** One icon on the dashboard. [step] is its number on the build list. */
 data class Tile(val step: Int, val glyph: String, val label: String, val fullName: String)
 
@@ -44,7 +56,15 @@ val adminTiles = listOf(
     Tile(12, "⭐", "Ratings", "Ratings and complaints")
 )
 
-val builtSteps = setOf(1, 2)
+val builtSteps = setOf(1, 2, 3)
+
+val pricingGroups = listOf("Drivers", "Fares", "Tax")
+
+/** "₦1,000", "85%" or "7.5%". */
+fun formatPrice(unit: String, value: Double): String {
+    if (unit == "₦") return "₦" + "%,d".format(value.toInt())
+    return if (value == value.toInt().toDouble()) "${value.toInt()}%" else "%.1f%%".format(value)
+}
 
 val rejectionReasons = listOf(
     "Documents unclear",
@@ -73,6 +93,37 @@ object AdminRepository {
     )
 
     fun rider(id: String): Rider? = riders.firstOrNull { it.id == id }
+
+    // PLACEHOLDER values, the same ones the rider app uses until pricing is decided.
+    val pricing = mutableStateListOf(
+        PriceSetting("daily_fee", "Drivers", "Daily driver fee", "₦", 1000.0, 1.0, 100000.0,
+            "Charged on days a driver works. Planned range ₦800 to ₦1,500, not locked."),
+        PriceSetting("min_fare", "Fares", "Minimum fare", "₦", 1000.0, 100.0, 100000.0,
+            "The lowest fare any trip can have."),
+        PriceSetting("base_fare", "Fares", "Base fare", "₦", 500.0, 0.0, 100000.0,
+            "Added to every trip before the per-km rate."),
+        PriceSetting("per_km", "Fares", "Rate per km", "₦", 420.0, 1.0, 10000.0,
+            "Multiplied by the trip distance."),
+        PriceSetting("min_percent", "Fares", "Lowest price a rider can set", "%", 85.0, 1.0, 100.0,
+            "As a share of the recommended fare. Riders can never go below it."),
+        PriceSetting("comfort", "Fares", "Comfort price", "%", 130.0, 100.0, 500.0,
+            "As a share of the recommended fare."),
+        PriceSetting("quick", "Fares", "Quick Accept price", "%", 115.0, 100.0, 500.0,
+            "As a share of the recommended fare."),
+        PriceSetting("vat", "Tax", "VAT rate", "%", 7.5, 0.0, 100.0,
+            "Placeholder. To be confirmed with an accountant.")
+    )
+
+    /** Price changes made this session, newest first. With a backend these are saved and logged. */
+    val priceChanges = mutableStateListOf<String>()
+
+    fun updatePrice(key: String, newValue: Double) {
+        val index = pricing.indexOfFirst { it.key == key }
+        if (index < 0) return
+        val old = pricing[index]
+        pricing[index] = old.copy(value = newValue)
+        priceChanges.add(0, "${old.label}: ${formatPrice(old.unit, old.value)} → ${formatPrice(old.unit, newValue)}")
+    }
 
     /** Decisions made this session, newest first. With a backend these are saved and logged. */
     val decisions = mutableStateListOf<String>()
