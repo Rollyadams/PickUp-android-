@@ -14,6 +14,17 @@ data class DriverApplication(
     val papersOk: Boolean
 )
 
+data class Rider(
+    val id: String,
+    val name: String,
+    val phone: String,
+    val joined: String,
+    val trips: Int,
+    val rating: Double?,
+    val payment: String,
+    val phoneVerified: Boolean
+)
+
 /** One icon on the dashboard. [step] is its number on the build list. */
 data class Tile(val step: Int, val glyph: String, val label: String, val fullName: String)
 
@@ -33,7 +44,7 @@ val adminTiles = listOf(
     Tile(12, "⭐", "Ratings", "Ratings and complaints")
 )
 
-val builtSteps = setOf(1)
+val builtSteps = setOf(1, 2)
 
 val rejectionReasons = listOf(
     "Documents unclear",
@@ -50,6 +61,18 @@ object AdminRepository {
         DriverApplication("a3", "Musa Bello", "0809 555 0123", "Kia Rio 2016", "ABC-317-FK", "Yesterday", true, false, true),
         DriverApplication("a4", "Tolu Ajayi", "0812 555 0190", "Toyota Camry 2015", "EKY-581-AA", "Yesterday", true, true, true)
     )
+
+    val riders = listOf(
+        Rider("r1", "Ada Nwosu", "0803 555 0111", "12 Sep 2026", 18, 4.9, "Cash", true),
+        Rider("r2", "Bayo Salami", "0805 555 0122", "20 Sep 2026", 7, 4.7, "Bank Transfer", true),
+        Rider("r3", "Chidi Okafor", "0807 555 0133", "28 Sep 2026", 2, 5.0, "Cash", true),
+        Rider("r4", "Fatima Yusuf", "0810 555 0144", "2 Oct 2026", 0, null, "Cash", false),
+        Rider("r5", "Grace Idowu", "0813 555 0155", "4 Oct 2026", 4, 4.5, "Bank Transfer", true),
+        Rider("r6", "Hassan Musa", "0816 555 0166", "7 Oct 2026", 0, null, "Cash", false),
+        Rider("r7", "Ife Adebayo", "0902 555 0177", "8 Oct 2026", 1, 5.0, "Cash", true)
+    )
+
+    fun rider(id: String): Rider? = riders.firstOrNull { it.id == id }
 
     /** Decisions made this session, newest first. With a backend these are saved and logged. */
     val decisions = mutableStateListOf<String>()
