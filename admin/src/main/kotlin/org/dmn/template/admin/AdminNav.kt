@@ -27,7 +27,7 @@ import org.dmn.template.LocalPu
 import org.dmn.template.PuAmber
 import org.dmn.template.PuAmberInk
 
-/** The admin app. Steps 1 (drivers) and 2 (riders) open from the home grid so far. */
+/** The admin app. Steps 1 (drivers), 2 (riders) and 3 (pricing) open from the home grid so far. */
 @Composable
 fun AdminNav() {
     val navController = rememberNavController()
@@ -88,6 +88,7 @@ fun AdminNav() {
                             when (step) {
                                 1 -> navController.navigate("drivers")
                                 2 -> navController.navigate("riders")
+                                3 -> navController.navigate("pricing")
                             }
                         })
                     }
@@ -96,6 +97,9 @@ fun AdminNav() {
                             onBack = { navController.popBackStack() },
                             onOpen = { id -> navController.navigate("driver/$id") }
                         )
+                    }
+                    composable("pricing") {
+                        AdminPricingScreen(onBack = { navController.popBackStack() })
                     }
                     composable("riders") {
                         AdminRidersScreen(
