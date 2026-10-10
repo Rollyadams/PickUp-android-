@@ -45,6 +45,14 @@ data class Dispute(
     val outcome: String? = null
 )
 
+data class WalletEntry(val date: String, val label: String, val amount: Int)
+
+data class DriverWallet(val id: String, val name: String, val balance: Int, val entries: List<WalletEntry>)
+
+data class PeriodTotals(val trips: Int, val faresPaid: Int, val feesCollected: Int, val vatCollected: Int)
+
+data class Remittance(val date: String, val amount: Int)
+
 /** One editable price or tax setting. [unit] is "₦" or "%". */
 data class PriceSetting(
     val key: String,
@@ -76,7 +84,7 @@ val adminTiles = listOf(
     Tile(12, "⭐", "Ratings", "Ratings and complaints")
 )
 
-val builtSteps = setOf(1, 2, 3, 4)
+val builtSteps = setOf(1, 2, 3, 4, 5)
 
 /** How staff can close a dispute. These are placeholders until the rules are decided. */
 val disputeOutcomes = listOf("In favour of the rider", "In favour of the driver", "No fault found")
@@ -179,6 +187,64 @@ object AdminRepository {
             "In favour of the driver"
         )
     )
+
+    // Demo money. Fares are paid by riders straight to drivers, so only the daily fees are Pick Up's
+    // income. VAT is collected for the government and passed on.
+    val totalsToday = PeriodTotals(128, 412600, 96000, 30945)
+    val totalsMonth = PeriodTotals(1940, 6250000, 1460000, 468750)
+
+    /** All VAT collected to date, in naira. */
+    const val VAT_COLLECTED_TO_DATE = 468750
+
+    val remittances = mutableStateListOf(Remittance("30 Sep 2026", 300000))
+
+    fun vatRemitted(): Int = remittances.sumOf { it.amount }
+
+    fun vatOwed(): Int = VAT_COLLECTED_TO_DATE - vatRemitted()
+
+    fun recordRemittance(amount: Int) {
+        remittances.add(0, Remittance("Today", amount))
+    }
+
+    val wallets = listOf(
+        DriverWallet(
+            "d1", "Emeka Obi", 5400,
+            listOf(
+                WalletEntry("Today", "Daily fee", -1000),
+                WalletEntry("Today", "VAT on fares", -1350),
+                WalletEntry("Yesterday", "Top-up", 8000),
+                WalletEntry("Yesterday", "Daily fee", -1000)
+            )
+        ),
+        DriverWallet(
+            "d2", "Sade Bakare", 1200,
+            listOf(
+                WalletEntry("Today", "Daily fee", -1000),
+                WalletEntry("Today", "VAT on fares", -820),
+                WalletEntry("Yesterday", "Top-up", 3000)
+            )
+        ),
+        DriverWallet(
+            "d3", "Ibrahim Sani", 0,
+            listOf(
+                WalletEntry("Yesterday", "Daily fee", -1000),
+                WalletEntry("2 days ago", "Top-up", 2000)
+            )
+        ),
+        DriverWallet(
+            "d4", "Tunde Lawal", 8300,
+            listOf(
+                WalletEntry("Today", "Daily fee", -1000),
+                WalletEntry("Today", "VAT on fares", -2100),
+                WalletEntry("2 days ago", "Top-up", 10000)
+            )
+        )
+    )
+
+    fun wallet(id: String): DriverWallet? = wallets.firstOrNull { it.id == id }
+
+    /** The current daily driver fee from the pricing settings. */
+    fun dailyFee(): Int = pricing.firstOrNull { it.key == "daily_fee" }?.value?.toInt() ?: 0
 
     fun openDisputes(): Int = disputes.count { it.outcome == null }
 
