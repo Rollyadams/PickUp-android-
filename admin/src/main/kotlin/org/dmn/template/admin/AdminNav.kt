@@ -27,7 +27,7 @@ import org.dmn.template.LocalPu
 import org.dmn.template.PuAmber
 import org.dmn.template.PuAmberInk
 
-/** The admin app. Steps 1 to 4 (drivers, riders, pricing, disputes) open from the home grid so far. */
+/** The admin app. Steps 1 to 5 (drivers, riders, pricing, disputes, finance) open from the home grid so far. */
 @Composable
 fun AdminNav() {
     val navController = rememberNavController()
@@ -90,6 +90,7 @@ fun AdminNav() {
                                 2 -> navController.navigate("riders")
                                 3 -> navController.navigate("pricing")
                                 4 -> navController.navigate("disputes")
+                                5 -> navController.navigate("finance")
                             }
                         })
                     }
@@ -97,6 +98,18 @@ fun AdminNav() {
                         AdminDriversScreen(
                             onBack = { navController.popBackStack() },
                             onOpen = { id -> navController.navigate("driver/$id") }
+                        )
+                    }
+                    composable("finance") {
+                        AdminFinanceScreen(
+                            onBack = { navController.popBackStack() },
+                            onOpenWallet = { id -> navController.navigate("wallet/$id") }
+                        )
+                    }
+                    composable("wallet/{id}") { entry ->
+                        AdminWalletScreen(
+                            id = entry.arguments?.getString("id") ?: "",
+                            onBack = { navController.popBackStack() }
                         )
                     }
                     composable("disputes") {
