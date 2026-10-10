@@ -25,6 +25,26 @@ data class Rider(
     val phoneVerified: Boolean
 )
 
+data class ChatLine(val from: String, val text: String)
+
+data class Dispute(
+    val id: String,
+    val title: String,
+    val opened: String,
+    val route: String,
+    val fare: Int,
+    val payment: String,
+    val riderName: String,
+    val driverName: String,
+    val riderSide: String,
+    val driverSide: String,
+    val riderMarkedPaid: Boolean,
+    val driverConfirmedReceived: Boolean,
+    val chat: List<ChatLine>,
+    /** Null while the dispute is open. */
+    val outcome: String? = null
+)
+
 /** One editable price or tax setting. [unit] is "₦" or "%". */
 data class PriceSetting(
     val key: String,
@@ -56,7 +76,10 @@ val adminTiles = listOf(
     Tile(12, "⭐", "Ratings", "Ratings and complaints")
 )
 
-val builtSteps = setOf(1, 2, 3)
+val builtSteps = setOf(1, 2, 3, 4)
+
+/** How staff can close a dispute. These are placeholders until the rules are decided. */
+val disputeOutcomes = listOf("In favour of the rider", "In favour of the driver", "No fault found")
 
 val pricingGroups = listOf("Drivers", "Fares", "Tax")
 
@@ -113,6 +136,58 @@ object AdminRepository {
         PriceSetting("vat", "Tax", "VAT rate", "%", 7.5, 0.0, 100.0,
             "Placeholder. To be confirmed with an accountant.")
     )
+
+    val disputes = mutableStateListOf(
+        Dispute(
+            "x1", "Bank transfer not received", "Today, 10:05", "Yaba Tech Gate → Surulere Shoprite", 4300, "Bank Transfer",
+            "Ada Nwosu", "Emeka Obi",
+            "I sent ₦4,300 to the driver's account before leaving the car and marked the trip as paid.",
+            "Nothing has reached my account. I confirmed nothing.",
+            true, false,
+            listOf(
+                ChatLine("Rider", "I have sent the money, please check."),
+                ChatLine("Driver", "My account shows nothing."),
+                ChatLine("Rider", "Here is the transfer, I will send the receipt.")
+            )
+        ),
+        Dispute(
+            "x2", "Rider paid less than the fare", "Today, 8:22", "Allen Avenue → Ikeja City Mall", 3000, "Cash",
+            "Bayo Salami", "Tunde Lawal",
+            "I paid the full ₦3,000 in cash.",
+            "The rider gave me ₦2,000 and left.",
+            true, false,
+            listOf(
+                ChatLine("Driver", "You still owe me ₦1,000."),
+                ChatLine("Rider", "I paid you everything at the gate.")
+            )
+        ),
+        Dispute(
+            "x3", "Fare higher than agreed", "Yesterday", "Ojuelegba Bus Stop → National Theatre", 5200, "Cash",
+            "Chidi Okafor", "Sade Bakare",
+            "The driver took a long route and the fare went up.",
+            "There was a road block, so I used another road.",
+            true, true,
+            listOf(ChatLine("Rider", "Why is the fare higher now?"), ChatLine("Driver", "Road block on the main road."))
+        ),
+        Dispute(
+            "x4", "Rider did not show up", "Yesterday", "Yaba Tech Gate → Allen Avenue", 5200, "Bank Transfer",
+            "Hassan Musa", "Ibrahim Sani",
+            "I was on my way and the driver cancelled.",
+            "I waited more than 5 minutes and the rider never came.",
+            false, false,
+            emptyList(),
+            "In favour of the driver"
+        )
+    )
+
+    fun openDisputes(): Int = disputes.count { it.outcome == null }
+
+    fun dispute(id: String): Dispute? = disputes.firstOrNull { it.id == id }
+
+    fun resolve(id: String, outcome: String) {
+        val index = disputes.indexOfFirst { it.id == id }
+        if (index >= 0) disputes[index] = disputes[index].copy(outcome = outcome)
+    }
 
     /** Price changes made this session, newest first. With a backend these are saved and logged. */
     val priceChanges = mutableStateListOf<String>()
