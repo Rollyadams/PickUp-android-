@@ -136,7 +136,11 @@ fun AdminHomeScreen(onOpenStep: (Int) -> Unit) {
             }
 
             val badgeFor: (Tile) -> Int = { tile ->
-                if (tile.step == 1) AdminRepository.pending.size else 0
+                when (tile.step) {
+                    1 -> AdminRepository.pending.size
+                    4 -> AdminRepository.openDisputes()
+                    else -> 0
+                }
             }
             val onTile: (Tile) -> Unit = { tile ->
                 if (tile.step in builtSteps) onOpenStep(tile.step) else notBuilt = tile
